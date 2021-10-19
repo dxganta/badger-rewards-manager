@@ -44,7 +44,8 @@ def test_multi_user_multi_pools(deployer, users, vaults, badger_tree, badger, wa
 
     chain.mine(100)
 
-    # will change all the emissions to 50% 50%
+    # will change all the emissions to 33.3% 33.3% 33.3%
+    # remember to mass update all pools before setting a new alloc point
     badger_tree.massUpdatePools([pid0, pid1, pid2])
     badger_tree.set(pid2, 20)
 
