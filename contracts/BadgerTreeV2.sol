@@ -13,10 +13,17 @@ import "../deps/@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.so
 
 // NOTE: when adding a vault for the first time, if its lpSupply is zero but badgerPerBlock > 0, there are badgers lost till the lpSupply > 0
 
+// TODO: update LpSupply to read balance from sett
+// TODO: update userInfo amount to read shares from sett
+
+// IDEA: instead of updating the accTokensPerShare for every reward token why not just update the accBadgersPerShare only
+// like you are doing now & make the number of other reward tokens somehow a function of the accBadgerPerShare variable
+
 
 // dont even need a badger_per_block
 // just put some badgers give the duration (in seconds) till which you want these
 // badgers to complete & the function will automatically calculate the badger_reward_per_block
+// lpSupply is the total number of vault shares, and user's amount is the balanceOf shares he owns
 
 contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     using BoringERC20 for IERC20;
@@ -25,17 +32,17 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     /// `amount` LP token amount the user has provided.
     /// `rewardDebt` The amount of BADGER that the user has withdrawn
     struct UserInfo {
-        uint256 amount;
         int256 rewardDebt;
     }
 
     /// @notice Info of each sett.
     struct SettInfo {
-        uint128 accBadgerPerShare;
-        uint64 lastRewardBlock;
-        uint64 endingTimeStamp;
-        uint128 badgerPerBlock; 
-        uint256 lpSupply; // total deposits into that sett
+        uint64 lastRewardBlock; // the last block when the reward p were updated
+        uint64 endingTimeStamp; // ending timestamp for current reward cycle
+        uint128 accBadgerPerShare; // number of tokens accumulated per share till lastRewardBlock
+        uint128 badgerPerBlock; // number of reward token per block 
+        address[] rewardTokens;  // address of all the reward tokens
+        uint256[] tokenToBadgerRatios; // ratio of total emitted token to total emitted badgers
     }
 
     /// @notice Address of BADGER contract.
@@ -48,13 +55,13 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     mapping (address => mapping (address => UserInfo)) public userInfo;
 
     uint64 private constant PRECISION = 1e12;
-    uint64 public BLOCK_TIME = 15; // block time in seconds
+    uint64 public BLOCK_TIME = 12; // block time in seconds
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event Transfer(address indexed from, address indexed to, uint256 indexed pid, uint256 amount);
     event Harvest(address indexed user, address indexed settAddress, uint256 amount);
-    event LogSettAddition(address indexed settAddress);
+    event LogSettAddition(address indexed settAddress, address[] rewardTokens);
     event LogSetSett(address indexed settAddress, uint256 allocPoint);
     event LogUpdateSett(address indexed settAddress, uint64 lastRewardBlock, uint256 lpSupply, uint256 accBadgerPerShare);
 
@@ -68,42 +75,62 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
         BLOCK_TIME = _val;
     }
 
-    function add(address _settAddress) public onlyOwner {
+    function add(address _settAddress, address[] memory _rewardTokens) public onlyOwner {
         uint256 lastRewardBlock = block.number;
+
+        uint256[] memory _r = new uint256[](_rewardTokens.length);
 
         settInfo[_settAddress] = SettInfo({
             lastRewardBlock: uint64(lastRewardBlock),
             accBadgerPerShare: 0,
-            lpSupply: 0,
             endingTimeStamp: 0,
-            badgerPerBlock: 0
+            badgerPerBlock: 0,
+            rewardTokens: _rewardTokens,
+            tokenToBadgerRatios: _r
         });
 
-        emit LogSettAddition(_settAddress);
+        emit LogSettAddition(_settAddress, _rewardTokens);
     }
 
-    function addSettRewards(address _settAddress, uint256 _amount, uint64 _duration) public onlyOwner {
-        SettInfo storage _set = settInfo[_settAddress];
-        require(block.timestamp >= _set.endingTimeStamp, "Rewards cycle not over");
-        BADGER.safeTransfer(address(this), _amount);
-        _set.endingTimeStamp = uint64(block.timestamp) + _duration;
-        _set.badgerPerBlock = uint128(_amount / (_duration / BLOCK_TIME));
+    /// @notice add the sett rewards for the current cycle
+    /// @param _settAddress address of the vault for which to add rewards
+    /// @param _duration duration in seconds till when to use the given rewards
+    /// @param _amounts array containing amount of each reward Token. _amounts[0] must be the badger amount. therefore _amounts.length = sett.rewardTokens.length + 1
+    function addSettRewards(address _settAddress, uint64 _duration, uint256[] memory _amounts) public onlyOwner {
+        SettInfo storage _sett = settInfo[_settAddress];
+        require(block.timestamp > _sett.endingTimeStamp, "Rewards cycle not over");
+        _sett.endingTimeStamp = uint64(block.timestamp) + _duration;
+        _sett.badgerPerBlock = uint128(_amounts[0] / (_duration / BLOCK_TIME));
+
+        // set the ratios for the rewardTokens of this sett for current cycle
+        for (uint i = 1; i < _amounts.length; i++) {
+            _sett.tokenToBadgerRatios[i-1] = (_sett.tokenToBadgerRatios[i-1] + ((_amounts[i] * PRECISION) / _amounts[0])) / 2;
+        }
     }
 
-    /// @notice View function to see pending BADGER on frontend.
+    /// @notice View function to see all pending rewards on frontend.
     /// @param _sett The contract address of the sett
     /// @param _user Address of user.
-    /// @return pending BADGER reward for a given user.
-    function pendingBadger(address _sett, address _user) external view returns (uint256 pending) {
+    /// @return pending amount of all rewards. allPending[0] will be the badger rewards. rest will be the rewards for other tokens
+    function pendingRewards(address _sett, address _user) external view returns (uint256[] memory) {
         SettInfo memory sett = settInfo[_sett];
         UserInfo storage user = userInfo[_sett][_user];
         uint256 accBadgerPerShare = sett.accBadgerPerShare;
-        if (block.number > sett.lastRewardBlock && sett.lpSupply != 0) {
+        uint256 lpSupply = IERC20(_sett).totalSupply();
+        uint256 userBal = IERC20(_sett).balanceOf(_user);
+        if (block.number > sett.lastRewardBlock && lpSupply != 0) {
             uint256 blocks = block.number - sett.lastRewardBlock;
             uint256 badgerReward = blocks * sett.badgerPerBlock;
-            accBadgerPerShare = accBadgerPerShare + ((badgerReward * PRECISION) / sett.lpSupply);
+            accBadgerPerShare = accBadgerPerShare + ((badgerReward * PRECISION) / lpSupply);
         }
-        pending = uint256(int256((user.amount * accBadgerPerShare) / PRECISION) - user.rewardDebt);
+        uint256 pendingBadger = uint256(int256((userBal * accBadgerPerShare) / PRECISION) - user.rewardDebt);
+        uint256[] memory allPending = new uint256[](sett.rewardTokens.length);
+        allPending[0] = pendingBadger;
+        for (uint i = 0; i < sett.rewardTokens.length; i ++) {
+            allPending[i+1] = (sett.tokenToBadgerRatios[i] * pendingBadger) / PRECISION;
+        }
+
+        return allPending;
     }
 
     /// @notice Update reward variables of the given sett.
@@ -112,14 +139,15 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     function updateSett(address _settAddress) public returns (SettInfo memory sett) {
         sett = settInfo[_settAddress];
         if (block.number > sett.lastRewardBlock && block.timestamp < sett.endingTimeStamp) {
-            if (sett.lpSupply > 0) {
+            uint256 lpSupply = IERC20(_settAddress).totalSupply();
+            if (lpSupply > 0) {
                 uint256 blocks = block.number - sett.lastRewardBlock;
                 uint256 badgerReward = blocks * sett.badgerPerBlock;
-                sett.accBadgerPerShare += uint128((badgerReward * PRECISION) / sett.lpSupply);
+                sett.accBadgerPerShare += uint128((badgerReward * PRECISION) / lpSupply);
             }
             sett.lastRewardBlock = uint64(block.number);
             settInfo[_settAddress] = sett;
-            emit LogUpdateSett(_settAddress, sett.lastRewardBlock, sett.lpSupply, sett.accBadgerPerShare);
+            emit LogUpdateSett(_settAddress, sett.lastRewardBlock, lpSupply, sett.accBadgerPerShare);
         }
     }
 
@@ -133,23 +161,16 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
 
         if (_from == address(0)) {
             // notifyDeposit
-            to.amount += _amount;
             to.rewardDebt += _rewardDebt;
 
-            settInfo[msg.sender].lpSupply += _amount;
             emit Deposit(_to, _pid, _amount);
         } else if (_to == address(0)) {
             // notifyWithdraw
             from.rewardDebt -= _rewardDebt;
-            from.amount -= _amount;
-
-            settInfo[msg.sender].lpSupply -= _amount;
 
             emit Withdraw(_from, _pid, _amount);
         } else {
             // transfer between users
-            to.amount += _amount;
-            from.amount -= _amount;
 
             to.rewardDebt += _rewardDebt;
             from.rewardDebt -= _rewardDebt;
@@ -164,7 +185,8 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     function claim(address _settAddress, address to) public whenNotPaused {
         SettInfo memory sett = updateSett(_settAddress);
         UserInfo storage user = userInfo[_settAddress][msg.sender];
-        int256 accumulatedBadger = int256((user.amount * sett.accBadgerPerShare) / PRECISION);
+        uint256 userBal = IERC20(_settAddress).balanceOf(msg.sender);
+        int256 accumulatedBadger = int256((userBal * sett.accBadgerPerShare) / PRECISION);
         uint256 _pendingBadger = uint256(accumulatedBadger - user.rewardDebt);
 
         // Effects
@@ -175,7 +197,6 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
             BADGER.safeTransfer(to, _pendingBadger);
         }
         
-
         emit Harvest(msg.sender, _settAddress, _pendingBadger);
     }
 }
