@@ -107,6 +107,7 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
         updateSett(_settAddress);
         SettInfo storage _sett = settInfo[_settAddress];
         require(block.number > _sett.endingBlock, "Rewards cycle not over");
+        _sett.lastRewardBlock = uint64(block.number);
         _sett.endingBlock = uint64(block.number) + _blocks;
         _sett.badgerPerBlock = uint128(_amounts[0] / _blocks);
 
