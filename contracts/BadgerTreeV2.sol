@@ -100,15 +100,15 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
 
     /// @notice add the sett rewards for the current cycle
     /// @param _settAddress address of the vault for which to add rewards
-    /// @param _endingBlock ending block for current reward cycle
+    /// @param _blocks number of blocks for which this cycle should last
     /// @param _amounts array containing amount of each reward Token. _amounts[0] must be the badger amount. therefore _amounts.length = sett.rewardTokens.length + 1
-    function addSettRewards(address _settAddress, uint64 _endingBlock, uint128[] memory _amounts) external {
+    function addSettRewards(address _settAddress, uint64 _blocks, uint128[] memory _amounts) external {
         _onlyScheduler();
         updateSett(_settAddress);
         SettInfo storage _sett = settInfo[_settAddress];
         require(block.number > _sett.endingBlock, "Rewards cycle not over");
-        _sett.endingBlock = _endingBlock;
-        _sett.badgerPerBlock = uint128(_amounts[0] / (_endingBlock - block.number));
+        _sett.endingBlock = uint64(block.number) + _blocks;
+        _sett.badgerPerBlock = uint128(_amounts[0] / _blocks);
 
         // set the total rewardTokens of this sett for current cycle
         // this is used later to calculate the tokenToBadger Ratio for claiming rewards
