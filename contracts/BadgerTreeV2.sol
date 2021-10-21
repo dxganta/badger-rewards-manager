@@ -38,7 +38,6 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     mapping (address => mapping (address => mapping (address => int128))) public rewardDebts;
 
     uint64 private constant PRECISION = 1e12;
-    uint64 public BLOCK_TIME = 13; // block time in seconds
 
     event Deposit(address indexed user, address indexed sett, uint256 amount);
     event Withdraw(address indexed user, address indexed sett, uint256 amount);
@@ -53,11 +52,6 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
         BADGER = _badger;
         scheduler = _scheduler;
         pauser = _pauser;
-    }
-
-    /// @notice set the block time for the current blockchain
-    function setBlockTime(uint64 _val) external onlyOwner {
-        BLOCK_TIME = _val;
     }
 
     /// @notice set the scheduler who will schedule the rewards
@@ -108,7 +102,7 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
         SettInfo storage _sett = settInfo[_settAddress];
         require(block.number > _sett.endingBlock, "Rewards cycle not over");
         _sett.lastRewardBlock = uint64(block.number);
-        _sett.endingBlock = uint64(block.number) + _blocks;
+        _sett.endingBlock = _sett.lastRewardBlock + _blocks;
         _sett.badgerPerBlock = uint128(_amounts[0] / _blocks);
 
         // set the total rewardTokens of this sett for current cycle
