@@ -28,6 +28,8 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
 
     /// @notice Address of BADGER contract.
     address public immutable BADGER;
+    address public scheduler;
+    address public pauser;
 
     /// @notice Info of each sett. settAddress => settInfo
     mapping(address => SettInfo) public settInfo;
@@ -47,13 +49,37 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     event LogUpdateSett(address indexed settAddress, uint64 lastRewardBlock, uint256 lpSupply, uint256 accBadgerPerShare);
 
     /// @param _badger The BADGER token contract address.
-    constructor(address _badger) {
+    constructor(address _badger, address _scheduler, address _pauser) {
         BADGER = _badger;
+        scheduler = _scheduler;
+        pauser = _pauser;
     }
 
     /// @notice set the block time for the current blockchain
     function setBlockTime(uint64 _val) external onlyOwner {
         BLOCK_TIME = _val;
+    }
+
+    /// @notice set the scheduler who will schedule the rewards
+    function setScheduler(address _scheduler) external {
+        _onlyScheduler();
+        scheduler = _scheduler;
+    }
+
+    /// @notice set the pauser who will pause the rewards
+    function setPauser(address _pauser) external {
+        _onlyPauser();
+        pauser = _pauser;
+    }
+
+    function pause() external {
+        _onlyPauser();
+        _pause();
+    }
+
+    function unpause() external {
+        _onlyPauser();
+        _unpause();
     }
 
     function add(address _settAddress, address[] memory _rewardTokens) public onlyOwner {
@@ -75,7 +101,8 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     /// @param _settAddress address of the vault for which to add rewards
     /// @param _duration duration in seconds till when to use the given rewards
     /// @param _amounts array containing amount of each reward Token. _amounts[0] must be the badger amount. therefore _amounts.length = sett.rewardTokens.length + 1
-    function addSettRewards(address _settAddress, uint64 _duration, uint128[] memory _amounts) public onlyOwner {
+    function addSettRewards(address _settAddress, uint64 _duration, uint128[] memory _amounts) external {
+        _onlyScheduler();
         SettInfo storage _sett = settInfo[_settAddress];
         require(block.timestamp > _sett.endingTimeStamp, "Rewards cycle not over");
         _sett.endingTimeStamp = uint64(block.timestamp) + _duration;
@@ -193,5 +220,15 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
         }
         
         emit Harvest(msg.sender, _settAddress, _pendingBadger);
+    }
+
+
+    /// INTERNAL FUNCTIONS  
+    function _onlyScheduler() internal view {
+        require(msg.sender == scheduler, "Not Scheduler");
+    }
+
+    function _onlyPauser() internal view {
+        require(msg.sender == pauser, "Not Pauser");
     }
 }
