@@ -19,7 +19,7 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     /// @notice Info of each sett.
     struct SettInfo {
         uint64 lastRewardBlock; // the last block when the reward p were updated
-        uint64 endingTimeStamp; // ending timestamp for current reward cycle
+        uint64 endingBlock; // ending timestamp for current reward cycle
         uint128 accBadgerPerShare; // number of tokens accumulated per share till lastRewardBlock
         uint128 badgerPerBlock; // number of reward token per block 
         address[] rewardTokens;  // address of all the reward tokens
@@ -87,9 +87,9 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     /// @param _rewardTokens array of the other reward tokens excluding BADGER
     function add(address _settAddress, address[] memory _rewardTokens) public onlyOwner {
         settInfo[_settAddress] = SettInfo({
-            lastRewardBlock: uint64(block.number),
+            lastRewardBlock: 0,
             accBadgerPerShare: 0,
-            endingTimeStamp: 0,
+            endingBlock: 0,
             badgerPerBlock: 0,
             rewardTokens: _rewardTokens,
             totalTokens: new uint128[](_rewardTokens.length + 1)
@@ -100,14 +100,15 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
 
     /// @notice add the sett rewards for the current cycle
     /// @param _settAddress address of the vault for which to add rewards
-    /// @param _duration duration in seconds till when to use the given rewards
+    /// @param _endingBlock ending block for current reward cycle
     /// @param _amounts array containing amount of each reward Token. _amounts[0] must be the badger amount. therefore _amounts.length = sett.rewardTokens.length + 1
-    function addSettRewards(address _settAddress, uint64 _duration, uint128[] memory _amounts) external {
+    function addSettRewards(address _settAddress, uint64 _endingBlock, uint128[] memory _amounts) external {
         _onlyScheduler();
+        updateSett(_settAddress);
         SettInfo storage _sett = settInfo[_settAddress];
-        require(block.timestamp > _sett.endingTimeStamp, "Rewards cycle not over");
-        _sett.endingTimeStamp = uint64(block.timestamp) + _duration;
-        _sett.badgerPerBlock = uint128(_amounts[0] / (_duration / BLOCK_TIME));
+        require(block.number > _sett.endingBlock, "Rewards cycle not over");
+        _sett.endingBlock = _endingBlock;
+        _sett.badgerPerBlock = uint128(_amounts[0] / (_endingBlock - block.number));
 
         // set the total rewardTokens of this sett for current cycle
         // this is used later to calculate the tokenToBadger Ratio for claiming rewards
@@ -152,16 +153,20 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     /// @param _settAddress The address of the set
     /// @return sett Returns the sett that was updated.
     function updateSett(address _settAddress) public returns (SettInfo memory sett) {
-        // NOTE: What if nobody updates the sett before the endingTimeStamp
         sett = settInfo[_settAddress];
-        if (block.number > sett.lastRewardBlock && block.timestamp < sett.endingTimeStamp) {
+        uint64 currBlock = uint64(block.number);
+        if (block.number > sett.endingBlock) {
+            // this will happen most probably when updateSett is called on addSettRewards
+            currBlock = sett.endingBlock;
+        }
+        if (currBlock > sett.lastRewardBlock) {
             uint256 lpSupply = IERC20(_settAddress).totalSupply();
             if (lpSupply > 0) {
-                uint256 blocks = block.number - sett.lastRewardBlock;
+                uint256 blocks = currBlock - sett.lastRewardBlock;
                 uint256 badgerReward = blocks * sett.badgerPerBlock;
                 sett.accBadgerPerShare += uint128((badgerReward * PRECISION) / lpSupply);
             }
-            sett.lastRewardBlock = uint64(block.number);
+            sett.lastRewardBlock = currBlock;
             settInfo[_settAddress] = sett;
             emit LogUpdateSett(_settAddress, sett.lastRewardBlock, lpSupply, sett.accBadgerPerShare);
         }
