@@ -7,7 +7,7 @@ from brownie import (
     interface
 )
 
-from config import BADGER, WANT, BADGER_PER_BLOCK
+from config import BADGER, WANT, DAI, CRV
 from dotmap import DotMap
 import pytest
 
@@ -66,22 +66,37 @@ def deployed():
     # Deploy rewards contract
     badger_tree = BadgerTreeV2.deploy(
         BADGER,
-        BADGER_PER_BLOCK,
+        dev,
+        dev,
         {"from": dev}
     )
 
-    # uniswap some badgers into the tree
+    # uniswap some badgers & other reward tokens to owner
     router = Contract.from_explorer(
         "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D")
     router.swapExactETHForTokens(
         0,  # Mint out
         ["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", BADGER],
-        badger_tree,
+        dev,
         9999999999999999,
         {"from": dev, "value": 100000000000000000000}
     )
 
-    assert badger.balanceOf(badger_tree) > 0
+    router.swapExactETHForTokens(
+        0,  # Mint out
+        ["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", DAI],
+        dev,
+        9999999999999999,
+        {"from": accounts[1], "value": 100000000000000000000}
+    )
+
+    router.swapExactETHForTokens(
+        0,  # Mint out
+        ["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", CRV],
+        dev,
+        9999999999999999,
+        {"from": accounts[2], "value": 100000000000000000000}
+    )
 
     # uniswap some want to user
     user1 = get_want_for_user(accounts[1], WANT, router)
@@ -101,6 +116,8 @@ def deployed():
         vaults=[vault1, vault2, vault3],
         badger_tree=badger_tree,
         badger=badger,
+        dai=dai,
+        crv=crv,
         want=want
     )
 

@@ -14,7 +14,6 @@ import "../../interfaces/token/IERC20Detailed.sol";
 import "../../deps/SettAccessControlDefended.sol";
 import "../../interfaces/yearn/BadgerGuestlistApi.sol";
 import "../interfaces/IBadgerTreeV2.sol";
-import "../interfaces/ISettV3.sol";
 
 
 /*
@@ -26,8 +25,7 @@ Badger Vault contract for testing the rewards manager
 contract SettV3 is
     ERC20Upgradeable,
     SettAccessControlDefended,
-    PausableUpgradeable,
-    ISettV3
+    PausableUpgradeable
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using AddressUpgradeable for address;
@@ -46,7 +44,6 @@ contract SettV3 is
 
     address public guardian;
     address public BADGERTREEV2;
-    uint256 public PID; // PID for this vault in the BadgerTree Contract
 
     BadgerGuestListAPI public guestList;
 
@@ -227,13 +224,6 @@ contract SettV3 is
         BADGERTREEV2 = _tree;
     }
 
-    /// @notice this function will be called by the BadgerTree contract
-    /// on addition of this vault to the tree
-    function setPid(uint256 _pid) external whenNotPaused {
-        require(msg.sender == BADGERTREEV2, "sender not badgerTreeV2");
-        PID = _pid;
-    }
-
     /// @notice Set minimum threshold of underlying that must be deposited in strategy
     /// @notice Can only be changed by governance
     function setMin(uint256 _min) external whenNotPaused {
@@ -380,16 +370,16 @@ contract SettV3 is
 
     function _mint(address account, uint256 amount) internal override {
         super._mint(account, amount);
-        IBadgerTreeV2(BADGERTREEV2).notifyTransfer(PID, amount, address(0), account);
+        IBadgerTreeV2(BADGERTREEV2).notifyTransfer(amount, address(0), account);
     }
 
     function _burn(address account, uint256 amount) internal override {
         super._burn(account, amount);
-        IBadgerTreeV2(BADGERTREEV2).notifyTransfer(PID, amount, account, address(0)); 
+        IBadgerTreeV2(BADGERTREEV2).notifyTransfer(amount, account, address(0)); 
     }
 
     function _transfer(address sender, address recipient, uint256 amount) internal override {
         super._transfer(sender, recipient, amount);
-        IBadgerTreeV2(BADGERTREEV2).notifyTransfer(PID, amount, sender, recipient); 
+        IBadgerTreeV2(BADGERTREEV2).notifyTransfer(amount, sender, recipient); 
     }
 }

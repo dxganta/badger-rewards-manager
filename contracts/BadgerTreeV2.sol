@@ -40,9 +40,9 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     uint64 private constant PRECISION = 1e12;
     uint64 public BLOCK_TIME = 13; // block time in seconds
 
-    event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
-    event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event Transfer(address indexed from, address indexed to, uint256 indexed pid, uint256 amount);
+    event Deposit(address indexed user, address indexed sett, uint256 amount);
+    event Withdraw(address indexed user, address indexed sett, uint256 amount);
+    event Transfer(address indexed from, address indexed to, address indexed sett, uint256 amount);
     event Harvest(address indexed user, address indexed settAddress, uint256 amount);
     event LogSettAddition(address indexed settAddress, address[] rewardTokens);
     event LogSetSett(address indexed settAddress, uint256 allocPoint);
@@ -82,11 +82,12 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
         _unpause();
     }
 
+    /// @notice add a new sett to the rewards contract
+    /// @param _settAddress contract address of the sett
+    /// @param _rewardTokens array of the other reward tokens excluding BADGER
     function add(address _settAddress, address[] memory _rewardTokens) public onlyOwner {
-        uint256 lastRewardBlock = block.number;
-
         settInfo[_settAddress] = SettInfo({
-            lastRewardBlock: uint64(lastRewardBlock),
+            lastRewardBlock: uint64(block.number),
             accBadgerPerShare: 0,
             endingTimeStamp: 0,
             badgerPerBlock: 0,
@@ -151,6 +152,7 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     /// @param _settAddress The address of the set
     /// @return sett Returns the sett that was updated.
     function updateSett(address _settAddress) public returns (SettInfo memory sett) {
+        // NOTE: What if nobody updates the sett before the endingTimeStamp
         sett = settInfo[_settAddress];
         if (block.number > sett.lastRewardBlock && block.timestamp < sett.endingTimeStamp) {
             uint256 lpSupply = IERC20(_settAddress).totalSupply();
@@ -166,7 +168,7 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     }
 
     // can be called only by vault
-    function notifyTransfer(uint256 _pid, uint256 _amount, address _from, address _to) public {
+    function notifyTransfer(uint256 _amount, address _from, address _to) public {
         SettInfo memory sett = updateSett(msg.sender);
 
         int128 _rewardDebt = int128(int256((_amount * sett.accBadgerPerShare) / PRECISION));
@@ -175,19 +177,19 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
             // notifyDeposit
             rewardDebts[msg.sender][_to][BADGER] += _rewardDebt;
 
-            emit Deposit(_to, _pid, _amount);
+            emit Deposit(_to, msg.sender, _amount);
         } else if (_to == address(0)) {
             // notifyWithdraw
             rewardDebts[msg.sender][_from][BADGER] -= _rewardDebt;
 
-            emit Withdraw(_from, _pid, _amount);
+            emit Withdraw(_from, msg.sender, _amount);
         } else {
             // transfer between users
 
             rewardDebts[msg.sender][_to][BADGER] += _rewardDebt;
             rewardDebts[msg.sender][_from][BADGER] -= _rewardDebt;
 
-            emit Transfer(_from, _to, _pid, _amount);
+            emit Transfer(_from, _to, msg.sender, _amount);
         }
     }
 
