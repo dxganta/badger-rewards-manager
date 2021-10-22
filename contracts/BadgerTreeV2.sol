@@ -76,11 +76,15 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
         _unpause();
     }
 
+    function getTotalTokens(address _sett) public view returns (uint128[] memory) {
+        return settInfo[_sett].totalTokens;
+    } 
+
     /// @notice add a new sett to the rewards contract
     /// @param _settAddress contract address of the sett
     /// @param _rewardTokens array of the other reward tokens excluding BADGER
     function add(address _settAddress, address[] memory _rewardTokens) public onlyOwner {
-        settInfo[_settAddress] = SettInfo({
+        settInfo[_settAddress] =  SettInfo({
             lastRewardBlock: 0,
             accBadgerPerShare: 0,
             endingBlock: 0,
@@ -122,8 +126,13 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
         uint256 accBadgerPerShare = sett.accBadgerPerShare;
         uint256 lpSupply = IERC20(_sett).totalSupply();
         uint256 userBal = IERC20(_sett).balanceOf(_user);
-        if (block.number > sett.lastRewardBlock && lpSupply != 0) {
-            uint256 blocks = block.number - sett.lastRewardBlock;
+        uint64 currBlock = uint64(block.number);
+        if (block.number > sett.endingBlock) {
+        // this will happen most probably when updateSett is called on addSettRewards
+            currBlock = sett.endingBlock;
+        }
+        if (currBlock > sett.lastRewardBlock && lpSupply != 0) {
+            uint256 blocks = currBlock - sett.lastRewardBlock;
             uint256 badgerReward = blocks * sett.badgerPerBlock;
             accBadgerPerShare = accBadgerPerShare + ((badgerReward * PRECISION) / lpSupply);
         }
@@ -137,7 +146,7 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
         int128 accumulatedToken;
         for (uint i = 0; i < sett.rewardTokens.length; i ++) {
             // FORMULA: (TOKEN_TO_BADGER_RATIO * ACCUMULATED_BADGER) - USER_TOKEN_REWARD_DEBT
-            accumulatedToken = (int128(sett.totalTokens[0] * PRECISION / sett.totalTokens[i+1]) * int128(accumulatedBadger)) / int64(PRECISION);
+            accumulatedToken = (int128(sett.totalTokens[i+1] * PRECISION / sett.totalTokens[0]) * int128(accumulatedBadger)) / int64(PRECISION);
             allPending[i+1] = uint128(accumulatedToken - rewardDebts[_sett][msg.sender][sett.rewardTokens[i]]);
         }
 
@@ -167,7 +176,8 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
         }
     }
 
-    // can be called only by vault
+    // should be called only by vault
+    // well can be called by anyone tbh but doesn't make sense if anybody else calls it
     function notifyTransfer(uint256 _amount, address _from, address _to) public {
         SettInfo memory sett = updateSett(msg.sender);
 
@@ -215,7 +225,7 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
         int128 pendingToken;
         for (uint i = 0; i < sett.rewardTokens.length; i ++) {
             // FORMULA: (TOKEN_TO_BADGER_RATIO * ACCUMULATED_BADGER) - USER_TOKEN_REWARD_DEBT
-            accumulatedToken = (int128(sett.totalTokens[0] * PRECISION / sett.totalTokens[i+1]) * int128(accumulatedBadger)) / int64(PRECISION);
+            accumulatedToken = (int128(sett.totalTokens[i+1] * PRECISION / sett.totalTokens[0]) * int128(accumulatedBadger)) / int64(PRECISION);
             pendingToken = accumulatedToken - rewardDebts[_settAddress][msg.sender][sett.rewardTokens[i]];
             rewardDebts[_settAddress][msg.sender][sett.rewardTokens[i]] += pendingToken;
             IERC20(sett.rewardTokens[i]).safeTransfer(to, uint128(pendingToken));
