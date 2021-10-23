@@ -128,7 +128,6 @@ def test_multi_cycles(deployer, users, vaults, badger_tree, badger, want):
 
     chain.mine(blocks_3)
 
-    # check that only half the rewards of 3rd cycle are mined
     actual_rewards = badger_tree.pendingRewards(vault, user)
     actual_badger = actual_rewards[0]
     actual_dai = actual_rewards[1]
@@ -137,3 +136,14 @@ def test_multi_cycles(deployer, users, vaults, badger_tree, badger, want):
     assert approx(actual_badger, badger_amount_3, 0.001)
     assert approx(actual_dai, dai_amount_3, 0.001)
     assert approx(actual_crv, crv_amount_3, 0.001)
+
+    badger_tree.claim(vault, user, {"from": user})
+
+    actual_rewards = badger_tree.pendingRewards(vault, user)
+    assert actual_rewards[0] == 0
+    assert actual_rewards[1] == 0
+    assert actual_rewards[2] == 0
+
+
+def test_multi_deposit_adSettRewards(deployer, users, vaults, badger_tree, badger, want):
+    pass
