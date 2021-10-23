@@ -117,15 +117,15 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     }
 
     /// @notice View function to see all pending rewards on frontend.
-    /// @param _sett The contract address of the sett
+    /// @param _settAddress The contract address of the sett
     /// @param _user Address of user.
     /// @return pending amount of all rewards. allPending[0] will be the badger rewards. rest will be the rewards for other tokens
-    function pendingRewards(address _sett, address _user) external view returns (uint256[] memory) {
-        SettInfo memory sett = settInfo[_sett];
-        int128 rewardDebt = rewardDebts[_sett][_user][BADGER];
+    function pendingRewards(address _settAddress, address _user) external view returns (uint128[] memory) {
+        SettInfo memory sett = settInfo[_settAddress];
+        int128 rewardDebt = rewardDebts[_settAddress][_user][BADGER];
         uint256 accBadgerPerShare = sett.accBadgerPerShare;
-        uint256 lpSupply = IERC20(_sett).totalSupply();
-        uint256 userBal = IERC20(_sett).balanceOf(_user);
+        uint256 lpSupply = IERC20(_settAddress).totalSupply();
+        uint256 userBal = IERC20(_settAddress).balanceOf(_user);
         uint64 currBlock = uint64(block.number);
         if (block.number > sett.endingBlock) {
         // this will happen most probably when updateSett is called on addSettRewards
@@ -139,19 +139,51 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
         int256 accumulatedBadger = int256((userBal * accBadgerPerShare) / PRECISION);
         uint256 pendingBadger = uint256( accumulatedBadger - rewardDebt);
 
-        uint256[] memory allPending = new uint256[](sett.rewardTokens.length + 1);
-        allPending[0] = pendingBadger;
+        uint128[] memory allPending = new uint128[](sett.rewardTokens.length + 1);
+        allPending[0] = uint128(pendingBadger);
         
         // calculate pendingTokens
         int128 accumulatedToken;
         for (uint i = 0; i < sett.rewardTokens.length; i ++) {
             // FORMULA: (TOKEN_TO_BADGER_RATIO * ACCUMULATED_BADGER) - USER_TOKEN_REWARD_DEBT
             accumulatedToken = (int128(sett.totalTokens[i+1] * PRECISION / sett.totalTokens[0]) * int128(accumulatedBadger)) / int64(PRECISION);
-            allPending[i+1] = uint128(accumulatedToken - rewardDebts[_sett][msg.sender][sett.rewardTokens[i]]);
+            allPending[i+1] = uint128(accumulatedToken - rewardDebts[_settAddress][msg.sender][sett.rewardTokens[i]]);
         }
 
         return allPending;
     }
+
+    /// JUST FOR TESTING. DELETE THIS FUNCTION LATER
+    // function pendingAccums(address _settAddress, address _user) external view returns (uint128[] memory) {
+    //     SettInfo memory sett = settInfo[_settAddress];
+    //     uint256 accBadgerPerShare = sett.accBadgerPerShare;
+    //     uint256 lpSupply = IERC20(_settAddress).totalSupply();
+    //     uint256 userBal = IERC20(_settAddress).balanceOf(_user);
+    //     uint64 currBlock = uint64(block.number);
+    //     if (block.number > sett.endingBlock) {
+    //     // this will happen most probably when updateSett is called on addSettRewards
+    //         currBlock = sett.endingBlock;
+    //     }
+    //     if (currBlock > sett.lastRewardBlock && lpSupply != 0) {
+    //         uint256 blocks = currBlock - sett.lastRewardBlock;
+    //         uint256 badgerReward = blocks * sett.badgerPerBlock;
+    //         accBadgerPerShare = accBadgerPerShare + ((badgerReward * PRECISION) / lpSupply);
+    //     }
+    //     int256 accumulatedBadger = int256((userBal * accBadgerPerShare) / PRECISION);
+
+    //     uint128[] memory allPending = new uint128[](sett.rewardTokens.length + 1);
+    //     allPending[0] = uint128(uint256(accumulatedBadger));
+        
+    //     // calculate pendingTokens
+    //     int128 accumulatedToken;
+    //     for (uint i = 0; i < sett.rewardTokens.length; i ++) {
+    //         // FORMULA: (TOKEN_TO_BADGER_RATIO * ACCUMULATED_BADGER) - USER_TOKEN_REWARD_DEBT
+    //         accumulatedToken = (int128(sett.totalTokens[i+1] * PRECISION / sett.totalTokens[0]) * int128(accumulatedBadger)) / int64(PRECISION);
+    //         allPending[i+1] = uint128(accumulatedToken);
+    //     }
+
+    //     return allPending;
+    // }
 
     /// @notice Update reward variables of the given sett.
     /// @param _settAddress The address of the set
