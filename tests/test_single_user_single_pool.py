@@ -2,12 +2,13 @@ from brownie import *
 from brownie import (
     interface
 )
+import brownie
 from helpers.constants import *
 from helpers.utils import *
 from config import DAI, CRV
 
 
-def test_single_user_single_pool(deployer, users, vaults, badger_tree, badger, want):
+def test_single_cycle(deployer, users, vaults, badger_tree, badger, want):
     # test that vault can be added to the tree
     dai = interface.IERC20(DAI)
     crv = interface.IERC20(CRV)
@@ -31,6 +32,8 @@ def test_single_user_single_pool(deployer, users, vaults, badger_tree, badger, w
     badger_tree.addSettRewards(
         vault, blocks, [badger_amount, dai_amount, crv_amount], {"from": deployer})
 
+    # mine a little extra blocks to make sure no extra reward is given
+    # after cycle ends
     chain.mine(blocks + 5)
 
     actual_rewards = badger_tree.pendingRewards(vault, user)
@@ -49,34 +52,56 @@ def test_single_user_single_pool(deployer, users, vaults, badger_tree, badger, w
     assert approx(dai.balanceOf(user), dai_amount, 0.001)
     assert approx(crv.balanceOf(user), crv_amount, 0.001)
 
-    # user must get exactly BADGER_PER_BLOCK badgers after 1 block
-    # since the user currently owns 100% of the reward pool
-    # badger_tree.claim(pid, user, {"from": user})
 
-    # assert approx(badger.balanceOf(user), BADGER_PER_BLOCK, 0.001)
+def test_multi_cycles(deployer, users, vaults, badger_tree, badger, want):
+    # test that vault can be added to the tree
+    dai = interface.IERC20(DAI)
+    crv = interface.IERC20(CRV)
+    vault = vaults[1]
+    user = users[1]
+    badger_tree.add(vault, [DAI, CRV], {"from": deployer})
 
-    # after withdrawing all the first claim must give the pending rewards to the user
-    # and then any other claim after that must give zero rewards
-    # vault.withdrawAll({"from": user})
-    # userInfo = badger_tree.userInfo(pid, user)
-    # assert userInfo[0] == 0
+    # user must get added to pool rewards on deposit to vault
+    want.approve(vault, MaxUint256, {"from": user})
+    toDeposit = want.balanceOf(user)
+    vault.deposit(toDeposit, {"from": user})
 
-    # # if there are pending rewards
-    # if (userInfo[1] < 0):  # rewardDebt will be negative if there are rewards
-    #     bal1 = badger.balanceOf(user)
+    # schedule sett rewards for 100 blocks 1st cycle
+    blocks_1 = 100
+    badger_amount_1 = 100 * 10**18
+    dai_amount_1 = 400 * 10**18
+    crv_amount_1 = 200 * 10**18
+    badger.transfer(badger_tree, badger_amount_1, {"from": deployer})
+    dai.transfer(badger_tree, dai_amount_1, {"from": deployer})
+    crv.transfer(badger_tree, crv_amount_1, {"from": deployer})
+    badger_tree.addSettRewards(
+        vault, blocks_1, [badger_amount_1, dai_amount_1, crv_amount_1], {"from": deployer})
 
-    #     badger_tree.claim(pid, user, {"from": user})
-    #     bal2 = badger.balanceOf(user)
+    # schedule sett rewards for 70 blocks second cycle
+    blocks_2 = 70
+    badger_amount_2 = 50 * 10**18
+    dai_amount_2 = 150 * 10**18
+    crv_amount_2 = 100 * 10**18
+    badger.transfer(badger_tree, badger_amount_2, {"from": deployer})
+    dai.transfer(badger_tree, dai_amount_2, {"from": deployer})
+    crv.transfer(badger_tree, crv_amount_2, {"from": deployer})
+    with brownie.reverts("Rewards cycle not over"):
+        badger_tree.addSettRewards(
+            vault, blocks_2, [badger_amount_2, dai_amount_2, crv_amount_2], {"from": deployer})
 
-    #     assert bal2 - bal1 == -userInfo[1]
+    chain.mine(blocks_1)
 
-    # bal2 = badger.balanceOf(user)
-    # # all other subsequent claims must give zero rewards
-    # badger_tree.claim(pid, user, {"from": user})
-    # bal3 = badger.balanceOf(user)
-    # assert bal3 - bal2 == 0
+    badger_tree.addSettRewards(
+        vault, blocks_2, [badger_amount_2, dai_amount_2, crv_amount_2], {"from": deployer})
 
-    # # another check for sanity
-    # badger_tree.claim(pid, user, {"from": user})
-    # bal4 = badger.balanceOf(user)
-    # assert bal4 - bal3 == 0
+    chain.mine(blocks_2 + 10)
+
+    actual_rewards = badger_tree.pendingRewards(vault, user)
+    actual_badger = actual_rewards[0]
+    actual_dai = actual_rewards[1]
+    actual_crv = actual_rewards[2]
+
+    assert approx(actual_badger, int(badger_amount_1) +
+                  int(badger_amount_2), 0.001)
+    assert approx(actual_dai, int(dai_amount_1) + int(dai_amount_2), 0.001)
+    assert approx(actual_crv, int(crv_amount_1) + int(crv_amount_2), 0.001)

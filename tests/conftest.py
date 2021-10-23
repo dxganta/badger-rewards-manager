@@ -6,7 +6,7 @@ from brownie import (
     Contract,
     interface
 )
-
+from brownie import *
 from config import BADGER, WANT, DAI, CRV
 from dotmap import DotMap
 import pytest
@@ -79,7 +79,7 @@ def deployed():
         ["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", BADGER],
         dev,
         9999999999999999,
-        {"from": dev, "value": 100000000000000000000}
+        {"from": dev, "value": 10 * 10**18}
     )
 
     router.swapExactETHForTokens(
@@ -87,7 +87,7 @@ def deployed():
         ["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", DAI],
         dev,
         9999999999999999,
-        {"from": accounts[7], "value": 100000000000000000000}
+        {"from": accounts[7], "value": 10 * 10**18}
     )
 
     router.swapExactETHForTokens(
@@ -95,25 +95,25 @@ def deployed():
         ["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", CRV],
         dev,
         9999999999999999,
-        {"from": accounts[8], "value": 100000000000000000000}
+        {"from": accounts[8], "value": 10 * 10**18}
     )
 
     # uniswap some want to user
     user1 = get_want_for_user(accounts[1], WANT, router)
-    # user2 = get_want_for_user(accounts[2], WANT, router)
+    user2 = get_want_for_user(accounts[2], WANT, router)
     # user3 = get_want_for_user(accounts[3], WANT, router)
     # user4 = get_want_for_user(accounts[4], WANT, router)
     # user5 = get_want_for_user(accounts[5], WANT, router)
     # user6 = get_want_for_user(accounts[6], WANT, router)
 
     vault1 = deploy_vault(dev, badger_tree)
-    # vault2 = deploy_vault(dev, badger_tree)
+    vault2 = deploy_vault(dev, badger_tree)
     # vault3 = deploy_vault(dev, badger_tree)
 
     return DotMap(
         deployer=dev,
-        users=[user1],
-        vaults=[vault1],
+        users=[user1, user2],
+        vaults=[vault1, vault2],
         badger_tree=badger_tree,
         badger=badger,
         want=want
