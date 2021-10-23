@@ -131,6 +131,11 @@ def deployer(deployed):
 
 
 @pytest.fixture
+def want_whale(accounts):
+    return accounts.at("0xF3bE92B349CEfB671D4A6D4db6d814f9522712d1", force=True)
+
+
+@pytest.fixture
 def badger_tree(deployed):
     return deployed.badger_tree
 
