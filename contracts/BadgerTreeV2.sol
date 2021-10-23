@@ -211,7 +211,7 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     // should be called only by vault
     // well can be called by anyone tbh but doesn't make sense if anybody else calls it
     function notifyTransfer(uint256 _amount, address _from, address _to) public {
-        SettInfo memory sett = updateSett(msg.sender);
+        SettInfo memory sett = settInfo[msg.sender];
 
         int128 _rewardDebt = int128(int256((_amount * sett.accBadgerPerShare) / PRECISION));
 
