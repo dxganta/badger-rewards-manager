@@ -212,9 +212,8 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
         rewardDebts[_settAddress][msg.sender][BADGER] = int128(accumulatedBadger);
 
         // Interactions
-        if (pendingBadger != 0) {
-            IERC20(BADGER).safeTransfer(_to, pendingBadger);
-        }
+        require(pendingBadger != 0, "No pending rewards");
+        IERC20(BADGER).safeTransfer(_to, pendingBadger);
 
         // calculate pendingTokens
         int128 accumulatedToken;
