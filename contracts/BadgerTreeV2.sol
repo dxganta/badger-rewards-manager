@@ -76,10 +76,6 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
         _unpause();
     }
 
-    function getTotalTokens(address _sett) public view returns (uint128[] memory) {
-        return settInfo[_sett].totalTokens;
-    } 
-
     /// @notice add a new sett to the rewards contract
     /// @param _settAddress contract address of the sett
     /// @param _rewardTokens array of the other reward tokens excluding BADGER
@@ -181,23 +177,23 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     function notifyTransfer(uint256 _amount, address _from, address _to) public {
         SettInfo memory sett = settInfo[msg.sender];
 
-        int128 _rewardDebt = int128(int256((_amount * sett.accBadgerPerShare) / PRECISION));
+        int128 rewardDebt = int128(int256((_amount * sett.accBadgerPerShare) / PRECISION));
 
         if (_from == address(0)) {
             // notifyDeposit
-            rewardDebts[msg.sender][_to][BADGER] += _rewardDebt;
+            rewardDebts[msg.sender][_to][BADGER] += rewardDebt;
 
             emit Deposit(_to, msg.sender, _amount);
         } else if (_to == address(0)) {
             // notifyWithdraw
-            rewardDebts[msg.sender][_from][BADGER] -= _rewardDebt;
+            rewardDebts[msg.sender][_from][BADGER] -= rewardDebt;
 
             emit Withdraw(_from, msg.sender, _amount);
         } else {
             // transfer between users
 
-            rewardDebts[msg.sender][_to][BADGER] += _rewardDebt;
-            rewardDebts[msg.sender][_from][BADGER] -= _rewardDebt;
+            rewardDebts[msg.sender][_to][BADGER] += rewardDebt;
+            rewardDebts[msg.sender][_from][BADGER] -= rewardDebt;
 
             emit Transfer(_from, _to, msg.sender, _amount);
         }
@@ -205,19 +201,19 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
 
     /// @notice Harvest badger rewards for a vault sender to `to`
     /// @param _settAddress The address of the sett
-    /// @param to Receiver of BADGER rewards
-    function claim(address _settAddress, address to) public whenNotPaused {
+    /// @param _to Receiver of BADGER rewards
+    function claim(address _settAddress, address _to) public whenNotPaused {
         SettInfo memory sett = updateSett(_settAddress);
         uint256 userBal = IERC20(_settAddress).balanceOf(msg.sender);
         int256 accumulatedBadger = int256((userBal * sett.accBadgerPerShare) / PRECISION);
-        uint256 _pendingBadger = uint256(accumulatedBadger - rewardDebts[_settAddress][msg.sender][BADGER]);
+        uint256 pendingBadger = uint256(accumulatedBadger - rewardDebts[_settAddress][msg.sender][BADGER]);
 
         // add it to reward Debt
         rewardDebts[_settAddress][msg.sender][BADGER] = int128(accumulatedBadger);
 
         // Interactions
-        if (_pendingBadger != 0) {
-            IERC20(BADGER).safeTransfer(to, _pendingBadger);
+        if (pendingBadger != 0) {
+            IERC20(BADGER).safeTransfer(_to, pendingBadger);
         }
 
         // calculate pendingTokens
@@ -228,10 +224,10 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
             accumulatedToken = (int128(sett.totalTokens[i+1] * PRECISION / sett.totalTokens[0]) * int128(accumulatedBadger)) / int64(PRECISION);
             pendingToken = accumulatedToken - rewardDebts[_settAddress][msg.sender][sett.rewardTokens[i]];
             rewardDebts[_settAddress][msg.sender][sett.rewardTokens[i]] += pendingToken;
-            IERC20(sett.rewardTokens[i]).safeTransfer(to, uint128(pendingToken));
+            IERC20(sett.rewardTokens[i]).safeTransfer(_to, uint128(pendingToken));
         }
         
-        emit Harvest(msg.sender, _settAddress, _pendingBadger);
+        emit Harvest(msg.sender, _settAddress, pendingBadger);
     }
 
 

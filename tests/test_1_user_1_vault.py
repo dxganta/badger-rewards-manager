@@ -145,5 +145,5 @@ def test_multi_cycles(deployer, users, vaults, badger_tree, badger, want):
     assert actual_rewards[2] == 0
 
 
-def test_multi_deposit_adSettRewards(deployer, users, vaults, badger_tree, badger, want):
+def test_multi_deposit_addSettRewards(deployer, users, vaults, badger_tree, badger, want):
     pass
