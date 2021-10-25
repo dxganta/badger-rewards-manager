@@ -1,5 +1,6 @@
 from helpers.constants import *
 from brownie import Wei, chain
+import brownie
 
 MINE_BLOCK_TEST = 100
 
@@ -56,8 +57,7 @@ def test_break(
     assert tx_after_withdrawal.events["Harvest"]["amount"] == reward_after_withdraw
 
     # avoid double claiming
-    tx_avoid_double_claim = badger_tree.claim(
-        vaults[0], want_whale, {"from": want_whale}
-    )
-
-    tx_avoid_double_claim.events["Harvest"]["amount"] == 0
+    with brownie.reverts("No pending rewards"):
+        badger_tree.claim(
+            vaults[0], want_whale, {"from": want_whale}
+        )

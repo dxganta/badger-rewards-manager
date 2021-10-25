@@ -101,7 +101,7 @@ def deployed():
     # uniswap some want to user
     user1 = get_want_for_user(accounts[1], WANT, router)
     user2 = get_want_for_user(accounts[2], WANT, router)
-    # user3 = get_want_for_user(accounts[3], WANT, router)
+    user3 = get_want_for_user(accounts[3], WANT, router)
     # user4 = get_want_for_user(accounts[4], WANT, router)
     # user5 = get_want_for_user(accounts[5], WANT, router)
     # user6 = get_want_for_user(accounts[6], WANT, router)
@@ -112,7 +112,7 @@ def deployed():
 
     return DotMap(
         deployer=dev,
-        users=[user1, user2],
+        users=[user1, user2, user3],
         vaults=[vault1, vault2],
         badger_tree=badger_tree,
         badger=badger,
@@ -133,6 +133,7 @@ def deployer(deployed):
 @pytest.fixture
 def want_whale(accounts):
     return accounts.at("0xF3bE92B349CEfB671D4A6D4db6d814f9522712d1", force=True)
+
 
 @pytest.fixture
 def badger_whale(accounts):
