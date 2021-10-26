@@ -221,7 +221,7 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
             require(pendingToken != 0, "No pending rewards");
             IERC20(reward).safeTransfer(_to, pendingToken);
         }
-        
+        //  TODO: How to emit the Harvest events. one token at a time or all together in an array
         // emit Harvest(msg.sender, _settAddress, pendingToken);
     }
 
