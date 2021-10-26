@@ -39,7 +39,7 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     event Deposit(address indexed user, address indexed sett, uint256 amount);
     event Withdraw(address indexed user, address indexed sett, uint256 amount);
     event Transfer(address indexed from, address indexed to, address indexed sett, uint256 amount);
-    event Harvest(address indexed user, address indexed settAddress, uint256[] amounts);
+    event Claimed (address indexed user, address indexed token, address indexed sett, uint256 amount, uint256 timestamp, uint256 blockNumber);
     event LogSettAddition(address indexed settAddress, address[] rewardTokens);
     event LogSetSett(address indexed settAddress, uint256 allocPoint);
     event LogUpdateSett(address indexed settAddress, uint64 lastRewardBlock, uint256 lpSupply, uint256 accTokenPerShare);
@@ -204,14 +204,15 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     /// @notice Harvest badger rewards for a vault sender to `to`
     /// @param _settAddress The address of the sett
     /// @param _to Receiver of BADGER rewards
-    function claim(address _settAddress, address _to) public whenNotPaused {
+    /// @param _rewardIndexes addresses of the reward tokens to claim
+    function claim(address _settAddress, address _to, uint[] memory _rewardIndexes) public whenNotPaused {
         SettInfo memory sett = updateSett(_settAddress);
         uint256 userBal = IERC20(_settAddress).balanceOf(msg.sender);
 
         address reward;
-        for (uint i =0; i < sett.rewardTokens.length; i ++) {
-            reward = sett.rewardTokens[i];
-            int256 accumulatedToken = int256((userBal * sett.accTokenPerShare[i]) / PRECISION);
+        for (uint j =0; j < _rewardIndexes.length; j ++) {
+            reward = sett.rewardTokens[_rewardIndexes[j]];
+            int256 accumulatedToken = int256((userBal * sett.accTokenPerShare[_rewardIndexes[j]]) / PRECISION);
             uint256 pendingToken = uint256(accumulatedToken - rewardDebts[_settAddress][msg.sender][reward]);
 
             // add it to reward Debt
@@ -220,9 +221,9 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
             // Interactions
             require(pendingToken != 0, "No pending rewards");
             IERC20(reward).safeTransfer(_to, pendingToken);
+
+            emit Claimed(_to, reward, _settAddress, pendingToken, block.timestamp, block.number);
         }
-        //  TODO: How to emit the Harvest events. one token at a time or all together in an array
-        // emit Harvest(msg.sender, _settAddress, pendingToken);
     }
 
 

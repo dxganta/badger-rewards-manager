@@ -37,10 +37,10 @@ def test_break(
     # should be higher badger rewards, right? TOFIX!
     assert reward_pending_after > reward_pending_before
 
-    tx = badger_tree.claim(vaults[0], want_whale, {"from": want_whale})
+    tx = badger_tree.claim(vaults[0], want_whale, [0], {"from": want_whale})
 
-    # assert tx.events["Harvest"]["amount"] == badger.balanceOf(want_whale)
-    # assert tx.events["Harvest"]["amount"] > reward_pending_after
+    assert tx.events["Claimed"]["amount"] == badger.balanceOf(want_whale)
+    assert tx.events["Claimed"]["amount"] > reward_pending_after
 
     chain.mine(MINE_BLOCK_TEST)
 
@@ -51,16 +51,14 @@ def test_break(
     reward_after_withdraw = badger_tree.pendingRewards(vaults[0], want_whale)[
         0]
 
-    before = badger.balanceOf(want_whale)
+    badger.balanceOf(want_whale)
     tx_after_withdrawal = badger_tree.claim(
-        vaults[0], want_whale, {"from": want_whale})
+        vaults[0], want_whale, [0], {"from": want_whale})
 
-    assert badger.balanceOf(want_whale) - before == reward_after_withdraw
-
-    # assert tx_after_withdrawal.events["Harvest"]["amount"] == reward_after_withdraw
+    assert tx_after_withdrawal.events["Claimed"]["amount"] == reward_after_withdraw
 
     # avoid double claiming
     with brownie.reverts("No pending rewards"):
         badger_tree.claim(
-            vaults[0], want_whale, {"from": want_whale}
+            vaults[0], want_whale, [0], {"from": want_whale}
         )

@@ -47,7 +47,7 @@ def test_single_cycle(deployer, users, vaults, badger_tree, badger, want):
 
     # g = web3.eth.estimate_gas(badger_tree.claim(vault, user, {"from": user}))
     # print("Claim function gas estimate", g)
-    badger_tree.claim(vault, user, {"from": user})
+    badger_tree.claim(vault, user, [0, 1, 2], {"from": user})
     assert approx(badger.balanceOf(user), badger_amount, 0.001)
     assert approx(dai.balanceOf(user), dai_amount, 0.001)
     assert approx(crv.balanceOf(user), crv_amount, 0.001)
@@ -106,7 +106,7 @@ def test_multi_cycles(deployer, users, vaults, badger_tree, badger, want):
     assert approx(actual_dai, int(dai_amount_1) + int(dai_amount_2), 0.001)
     assert approx(actual_crv, int(crv_amount_1) + int(crv_amount_2), 0.001)
 
-    badger_tree.claim(vault, user, {"from": user})
+    badger_tree.claim(vault, user, [0, 1, 2], {"from": user})
 
     assert approx(badger.balanceOf(user), int(badger_amount_1) +
                   int(badger_amount_2), 0.001)
@@ -137,7 +137,7 @@ def test_multi_cycles(deployer, users, vaults, badger_tree, badger, want):
     assert approx(actual_dai, dai_amount_3, 0.001)
     assert approx(actual_crv, crv_amount_3, 0.001)
 
-    badger_tree.claim(vault, user, {"from": user})
+    badger_tree.claim(vault, user, [0, 1, 2], {"from": user})
 
     actual_rewards = badger_tree.pendingRewards(vault, user)
     assert actual_rewards[0] == 0
@@ -204,7 +204,7 @@ def test_multi_deposit_addSettRewards(deployer, users, want_whale, badger_whale,
     assert approx(pd1[3] + pd2[3] + pd3[3], link_amount_1, 0.001)
 
     for i in range(0, 3):
-        badger_tree.claim(vault, users[i], {"from": users[i]})
+        badger_tree.claim(vault, users[i], [0, 1, 2, 3], {"from": users[i]})
 
     # assert False
 
