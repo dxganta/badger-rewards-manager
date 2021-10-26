@@ -10,5 +10,3 @@ autofetch_sources: True
 compiler:
   solc:
     version: 0.8.9
-
-reports:
