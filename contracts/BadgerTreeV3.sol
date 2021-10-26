@@ -8,8 +8,7 @@ import "./interfaces/ISettV3.sol";
 import "../libraries/BoringERC20.sol";
 import "../deps/@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
-// DIFFERENT RATES OF EMISSIONS PER BLOCK PER SET
-
+// DIFFERENT RATES OF EMISSIONS PER BLOCK PER SETT
 
 // NOTE: when adding a vault for the first time, if its lpSupply is zero but badgerPerBlock > 0, there are badgers lost till the lpSupply > 0
 

@@ -23,6 +23,16 @@ Start with notifyTransfer
   - Once per sett and then multiple people deposit (3 accounts)
  - Add, then deposit then add again
 
+For testing trasnfer
+Do a vault contract
+That triggers tht
+When I mint shares
+I get more points
+When I burn shares
+I get less points
+When I burn after having accrued some points, my previous points grew by the original mint
+But the new points will grow based on the new amount
+
 
 ## Gas costs (BadgerTreeV3)
 1. Deposit => 198406
