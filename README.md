@@ -22,3 +22,11 @@ Start with notifyTransfer
   - Once per sett and then deposit
   - Once per sett and then multiple people deposit (3 accounts)
  - Add, then deposit then add again
+
+
+## Gas costs (BadgerTreeV3)
+1. Deposit => 198406
+2. addSetRewards => 64832
+3. add => 93878
+4. claim => 270349 (for 3 reward tokens)
+5. withdraw => 75588
