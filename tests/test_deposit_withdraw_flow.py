@@ -104,9 +104,6 @@ def test_deposit_withdraw_rewards(deployer, users, vaults, badger_tree, badger, 
 
     chain.mine(int(blocks * 0.4))
 
-    pd1a = badger_tree.pendingRewards(vault, users[0])
-    pd2a = badger_tree.pendingRewards(vault, users[1])
-
     vault.deposit(toDeposit * 0.1, {"from": users[0]})
 
     u1_prcnt_new = vault.balanceOf(users[0]) / vault.totalSupply()
@@ -122,3 +119,13 @@ def test_deposit_withdraw_rewards(deployer, users, vaults, badger_tree, badger, 
                   (badger_amount * 0.6 * u1_prcnt_new) - (badger_amount/blocks * u1_prcnt_new) + (badger_amount/blocks * u1_prcnt), 0.001)
     assert approx(pd2b[0], (badger_amount * 0.4 * u2_prcnt) +
                   (badger_amount * 0.6 * u2_prcnt_new) - (badger_amount/blocks * u2_prcnt_new) + (badger_amount/blocks * u2_prcnt), 0.001)
+
+    assert approx(pd1b[1], (dai_amount * 0.4 * u1_prcnt) +
+                  (dai_amount * 0.6 * u1_prcnt_new) - (dai_amount/blocks * u1_prcnt_new) + (dai_amount/blocks * u1_prcnt), 0.001)
+    assert approx(pd2b[1], (dai_amount * 0.4 * u2_prcnt) +
+                  (dai_amount * 0.6 * u2_prcnt_new) - (dai_amount/blocks * u2_prcnt_new) + (dai_amount/blocks * u2_prcnt), 0.001)
+
+    assert approx(pd1b[2], (crv_amount * 0.4 * u1_prcnt) +
+                  (crv_amount * 0.6 * u1_prcnt_new) - (crv_amount/blocks * u1_prcnt_new) + (crv_amount/blocks * u1_prcnt), 0.001)
+    assert approx(pd2b[2], (crv_amount * 0.4 * u2_prcnt) +
+                  (crv_amount * 0.6 * u2_prcnt_new) - (crv_amount/blocks * u2_prcnt_new) + (crv_amount/blocks * u2_prcnt), 0.001)
