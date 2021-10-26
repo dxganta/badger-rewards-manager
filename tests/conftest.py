@@ -1,13 +1,14 @@
 from brownie import (
     accounts,
     BadgerTreeV2,
+    BadgerTreeV3,
     SettV3,
     Controller,
     Contract,
     interface
 )
 from brownie import *
-from config import BADGER, WANT, DAI, CRV
+from config import BADGER, WANT, DAI, CRV, LINK
 from dotmap import DotMap
 import pytest
 
@@ -64,8 +65,7 @@ def deployed():
     want = interface.IERC20(WANT)
 
     # Deploy rewards contract
-    badger_tree = BadgerTreeV2.deploy(
-        BADGER,
+    badger_tree = BadgerTreeV3.deploy(
         dev,
         dev,
         {"from": dev}
@@ -93,6 +93,14 @@ def deployed():
     router.swapExactETHForTokens(
         0,  # Mint out
         ["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", CRV],
+        dev,
+        9999999999999999,
+        {"from": accounts[8], "value": 10 * 10**18}
+    )
+
+    router.swapExactETHForTokens(
+        0,  # Mint out
+        ["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", LINK],
         dev,
         9999999999999999,
         {"from": accounts[8], "value": 10 * 10**18}

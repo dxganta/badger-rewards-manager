@@ -13,21 +13,18 @@ import "../deps/@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.so
 
 // NOTE: when adding a vault for the first time, if its lpSupply is zero but badgerPerBlock > 0, there are badgers lost till the lpSupply > 0
 
-contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
+contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     using BoringERC20 for IERC20;
 
     /// @notice Info of each sett.
     struct SettInfo {
         uint64 lastRewardBlock; // the last block when the reward p were updated
         uint64 endingBlock; // ending timestamp for current reward cycle
-        uint128 accBadgerPerShare; // number of tokens accumulated per share till lastRewardBlock
-        uint128 badgerPerBlock; // number of reward token per block 
+        uint128[] accTokenPerShare; // number of tokens accumulated per share till lastRewardBlock
+        uint128[] tokenPerBlock; // number of reward token per block 
         address[] rewardTokens;  // address of all the reward tokens
-        uint128[] totalTokens; // total number of emitted tokens till now. totalTokens[0] is for total emitted badgers. rest is for the other reward Tokens
     }
 
-    /// @notice Address of BADGER contract.
-    address public immutable BADGER;
     address public scheduler;
     address public pauser;
 
@@ -42,14 +39,12 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     event Deposit(address indexed user, address indexed sett, uint256 amount);
     event Withdraw(address indexed user, address indexed sett, uint256 amount);
     event Transfer(address indexed from, address indexed to, address indexed sett, uint256 amount);
-    event Harvest(address indexed user, address indexed settAddress, uint256 amount);
+    event Harvest(address indexed user, address indexed settAddress, uint256[] amounts);
     event LogSettAddition(address indexed settAddress, address[] rewardTokens);
     event LogSetSett(address indexed settAddress, uint256 allocPoint);
-    event LogUpdateSett(address indexed settAddress, uint64 lastRewardBlock, uint256 lpSupply, uint256 accBadgerPerShare);
+    event LogUpdateSett(address indexed settAddress, uint64 lastRewardBlock, uint256 lpSupply, uint256 accTokenPerShare);
 
-    /// @param _badger The BADGER token contract address.
-    constructor(address _badger, address _scheduler, address _pauser) {
-        BADGER = _badger;
+    constructor( address _scheduler, address _pauser) {
         scheduler = _scheduler;
         pauser = _pauser;
     }
@@ -82,11 +77,10 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     function add(address _settAddress, address[] memory _rewardTokens) public onlyOwner {
         settInfo[_settAddress] =  SettInfo({
             lastRewardBlock: 0,
-            accBadgerPerShare: 0,
+            accTokenPerShare: new uint128[](_rewardTokens.length),
+            tokenPerBlock: new uint128[](_rewardTokens.length),
             endingBlock: 0,
-            badgerPerBlock: 0,
-            rewardTokens: _rewardTokens,
-            totalTokens: new uint128[](_rewardTokens.length + 1)
+            rewardTokens: _rewardTokens
         });
 
         emit LogSettAddition(_settAddress, _rewardTokens);
@@ -103,12 +97,10 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
         require(block.number > _sett.endingBlock, "Rewards cycle not over");
         _sett.lastRewardBlock = uint64(block.number);
         _sett.endingBlock = _sett.lastRewardBlock + _blocks;
-        _sett.badgerPerBlock = uint128(_amounts[0] / _blocks);
-
         // set the total rewardTokens of this sett for current cycle
         // this is used later to calculate the tokenToBadger Ratio for claiming rewards
         for (uint i = 0; i < _amounts.length; i++) {
-            _sett.totalTokens[i] += _amounts[i];
+            _sett.tokenPerBlock[i] = uint128(_amounts[i] / _blocks);
         }
     }
 
@@ -116,34 +108,32 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     /// @param _settAddress The contract address of the sett
     /// @param _user Address of user.
     /// @return pending amount of all rewards. allPending[0] will be the badger rewards. rest will be the rewards for other tokens
-    function pendingRewards(address _settAddress, address _user) external view returns (uint128[] memory) {
+    function pendingRewards(address _settAddress, address _user) external view returns (uint256[] memory) {
         SettInfo memory sett = settInfo[_settAddress];
-        int128 rewardDebt = rewardDebts[_settAddress][_user][BADGER];
-        uint256 accBadgerPerShare = sett.accBadgerPerShare;
-        uint256 lpSupply = IERC20(_settAddress).totalSupply();
-        uint256 userBal = IERC20(_settAddress).balanceOf(_user);
+        uint n = sett.rewardTokens.length;
+        uint256[] memory allPending = new uint256[](n);
+
         uint64 currBlock = uint64(block.number);
         if (block.number > sett.endingBlock) {
         // this will happen most probably when updateSett is called on addSettRewards
             currBlock = sett.endingBlock;
         }
-        if (currBlock > sett.lastRewardBlock && lpSupply != 0) {
-            uint256 blocks = currBlock - sett.lastRewardBlock;
-            uint256 badgerReward = blocks * sett.badgerPerBlock;
-            accBadgerPerShare = accBadgerPerShare + ((badgerReward * PRECISION) / lpSupply);
-        }
-        int256 accumulatedBadger = int256((userBal * accBadgerPerShare) / PRECISION);
-        uint256 pendingBadger = uint256( accumulatedBadger - rewardDebt);
 
-        uint128[] memory allPending = new uint128[](sett.rewardTokens.length + 1);
-        allPending[0] = uint128(pendingBadger);
-        
-        // calculate pendingTokens
-        int128 accumulatedToken;
-        for (uint i = 0; i < sett.rewardTokens.length; i ++) {
-            // FORMULA: (TOKEN_TO_BADGER_RATIO * ACCUMULATED_BADGER) - USER_TOKEN_REWARD_DEBT
-            accumulatedToken = (int128(sett.totalTokens[i+1] * PRECISION / sett.totalTokens[0]) * int128(accumulatedBadger)) / int64(PRECISION);
-            allPending[i+1] = uint128(accumulatedToken - rewardDebts[_settAddress][_user][sett.rewardTokens[i]]);
+        uint256 blocks = currBlock - sett.lastRewardBlock;
+        uint256 lpSupply = IERC20(_settAddress).totalSupply();
+        uint256 userBal = IERC20(_settAddress).balanceOf(_user);
+
+        for (uint i = 0; i < n; i++) {
+            int128 rewardDebt = rewardDebts[_settAddress][_user][sett.rewardTokens[i]];
+            uint256 accTokenPerShare = sett.accTokenPerShare[i];
+            if (currBlock > sett.lastRewardBlock && lpSupply != 0) {
+                uint256 tokenReward = blocks * sett.tokenPerBlock[i];
+                accTokenPerShare = accTokenPerShare + ((tokenReward * PRECISION) / lpSupply);
+            }
+            int256 accumulatedToken = int256((userBal * accTokenPerShare) / PRECISION);
+            uint256 pendingToken = uint256(accumulatedToken - rewardDebt);
+
+            allPending[i] = pendingToken;
         }
 
         return allPending;
@@ -163,12 +153,14 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
             uint256 lpSupply = IERC20(_settAddress).totalSupply();
             if (lpSupply > 0) {
                 uint256 blocks = currBlock - sett.lastRewardBlock;
-                uint256 badgerReward = blocks * sett.badgerPerBlock;
-                sett.accBadgerPerShare += uint128((badgerReward * PRECISION) / lpSupply);
+                for (uint i =0; i < sett.rewardTokens.length; i ++) {
+                    uint256 tokenReward = blocks * sett.tokenPerBlock[i];
+                    sett.accTokenPerShare[i] += uint128((tokenReward * PRECISION) / lpSupply);
+                }
             }
             sett.lastRewardBlock = currBlock;
             settInfo[_settAddress] = sett;
-            emit LogUpdateSett(_settAddress, sett.lastRewardBlock, lpSupply, sett.accBadgerPerShare);
+            // emit LogUpdateSett(_settAddress, sett.lastRewardBlock, lpSupply, sett.accTokenPerShare);
         }
     }
 
@@ -177,21 +169,15 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     function notifyTransfer(uint256 _amount, address _from, address _to) public {
         SettInfo memory sett = settInfo[msg.sender];
 
-        if (sett.totalTokens[0] > 0) { // if anybody makes a deposit before the first set of rewards for the vault are added
-
-            int128 rewardDebt = int128(int256((_amount * sett.accBadgerPerShare) / PRECISION));
-
             uint256 t = sett.rewardTokens.length;
             int128[] memory tokenDebts = new int128[](t);
 
             for (uint i =0; i < t; i++) {
-                tokenDebts[i] = (int128(sett.totalTokens[i+1] * PRECISION / sett.totalTokens[0]) * int128(rewardDebt)) / int64(PRECISION);
+                tokenDebts[i] = int128(int256((_amount * sett.accTokenPerShare[i]) / PRECISION));
             }
 
             if (_from == address(0)) {
                 // notifyDeposit
-                rewardDebts[msg.sender][_to][BADGER] += rewardDebt;
-
                 for (uint i=0; i < t; i++) {
                     rewardDebts[msg.sender][_to][sett.rewardTokens[i]] += tokenDebts[i];
                 }
@@ -199,8 +185,6 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
                 emit Deposit(_to, msg.sender, _amount);
             } else if (_to == address(0)) {
                 // notifyWithdraw
-                rewardDebts[msg.sender][_from][BADGER] -= rewardDebt;
-
                 for (uint i=0; i < t; i++) {
                     rewardDebts[msg.sender][_from][sett.rewardTokens[i]] -= tokenDebts[i];
                 }
@@ -208,10 +192,6 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
                 emit Withdraw(_from, msg.sender, _amount);
             } else {
                 // transfer between users
-
-                rewardDebts[msg.sender][_to][BADGER] += rewardDebt;
-                rewardDebts[msg.sender][_from][BADGER] -= rewardDebt;
-
                 for (uint i=0; i < t; i++) {
                     rewardDebts[msg.sender][_to][sett.rewardTokens[i]] += tokenDebts[i];
                     rewardDebts[msg.sender][_from][sett.rewardTokens[i]] -= tokenDebts[i];
@@ -219,7 +199,6 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
 
                 emit Transfer(_from, _to, msg.sender, _amount);
             }
-        }
     }
 
     /// @notice Harvest badger rewards for a vault sender to `to`
@@ -228,28 +207,22 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     function claim(address _settAddress, address _to) public whenNotPaused {
         SettInfo memory sett = updateSett(_settAddress);
         uint256 userBal = IERC20(_settAddress).balanceOf(msg.sender);
-        int256 accumulatedBadger = int256((userBal * sett.accBadgerPerShare) / PRECISION);
-        uint256 pendingBadger = uint256(accumulatedBadger - rewardDebts[_settAddress][msg.sender][BADGER]);
 
-        // add it to reward Debt
-        rewardDebts[_settAddress][msg.sender][BADGER] = int128(accumulatedBadger);
+        address reward;
+        for (uint i =0; i < sett.rewardTokens.length; i ++) {
+            reward = sett.rewardTokens[i];
+            int256 accumulatedToken = int256((userBal * sett.accTokenPerShare[i]) / PRECISION);
+            uint256 pendingToken = uint256(accumulatedToken - rewardDebts[_settAddress][msg.sender][reward]);
 
-        // Interactions
-        require(pendingBadger != 0, "No pending rewards");
-        IERC20(BADGER).safeTransfer(_to, pendingBadger);
+            // add it to reward Debt
+            rewardDebts[_settAddress][msg.sender][reward] = int128(accumulatedToken);
 
-        // calculate pendingTokens
-        int128 accumulatedToken;
-        int128 pendingToken;
-        for (uint i = 0; i < sett.rewardTokens.length; i ++) {
-            // FORMULA: (TOKEN_TO_BADGER_RATIO * ACCUMULATED_BADGER) - USER_TOKEN_REWARD_DEBT
-            accumulatedToken = (int128(sett.totalTokens[i+1] * PRECISION / sett.totalTokens[0]) * int128(accumulatedBadger)) / int64(PRECISION);
-            pendingToken = accumulatedToken - rewardDebts[_settAddress][msg.sender][sett.rewardTokens[i]];
-            rewardDebts[_settAddress][msg.sender][sett.rewardTokens[i]] = accumulatedToken;
-            IERC20(sett.rewardTokens[i]).safeTransfer(_to, uint128(pendingToken));
+            // Interactions
+            require(pendingToken != 0, "No pending rewards");
+            IERC20(reward).safeTransfer(_to, pendingToken);
         }
         
-        emit Harvest(msg.sender, _settAddress, pendingBadger);
+        // emit Harvest(msg.sender, _settAddress, pendingToken);
     }
 
 
@@ -261,43 +234,4 @@ contract BadgerTreeV2 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     function _onlyPauser() internal view {
         require(msg.sender == pauser, "Not Pauser");
     }
-
-
-    /// TEST FUNCTIONS
-    function getTotalTokens(address _sett) external view returns (uint128[] memory)  {
-        return settInfo[_sett].totalTokens;
-    }
-
-        function pendingAccs(address _settAddress, address _user) external view returns (int256[] memory) {
-        SettInfo memory sett = settInfo[_settAddress];
-        uint256 accBadgerPerShare = sett.accBadgerPerShare;
-        uint256 lpSupply = IERC20(_settAddress).totalSupply();
-        uint256 userBal = IERC20(_settAddress).balanceOf(_user);
-        uint64 currBlock = uint64(block.number);
-        if (block.number > sett.endingBlock) {
-        // this will happen most probably when updateSett is called on addSettRewards
-            currBlock = sett.endingBlock;
-        }
-        if (currBlock > sett.lastRewardBlock && lpSupply != 0) {
-            uint256 blocks = currBlock - sett.lastRewardBlock;
-            uint256 badgerReward = blocks * sett.badgerPerBlock;
-            accBadgerPerShare = accBadgerPerShare + ((badgerReward * PRECISION) / lpSupply);
-        }
-        int256 accumulatedBadger = int256((userBal * accBadgerPerShare) / PRECISION);
-
-        int256[] memory allPending = new int256[](sett.totalTokens.length);
-        allPending[0] = accumulatedBadger;
-        
-        // calculate pendingTokens
-        int128 accumulatedToken;
-        for (uint i = 0; i < sett.rewardTokens.length; i ++) {
-            // FORMULA: (TOKEN_TO_BADGER_RATIO * ACCUMULATED_BADGER) - USER_TOKEN_REWARD_DEBT
-            accumulatedToken = (int128(sett.totalTokens[i+1] * PRECISION / sett.totalTokens[0]) * int128(accumulatedBadger)) / int64(PRECISION);
-            allPending[i+1] = int256(accumulatedToken);
-        }
-
-        return allPending;
-    }
-
-
 }

@@ -14,3 +14,16 @@ interface IBadgerTreeV2 {
     function notifyTransfer(uint256 _amount, address _from, address _to) external;
     function updateSett(address _sett) external returns (SettInfo memory sett);
 }
+
+interface IBadgerTreeV3 {
+       /// @notice Info of each sett.
+    struct SettInfo {
+        uint64 lastRewardBlock; // the last block when the reward p were updated
+        uint64 endingBlock; // ending timestamp for current reward cycle
+        uint128[] accTokenPerShare; // number of tokens accumulated per share till lastRewardBlock
+        uint128[] tokenPerBlock; // number of reward token per block 
+        address[] rewardTokens;  // address of all the reward tokens
+    }
+    function notifyTransfer(uint256 _amount, address _from, address _to) external;
+    function updateSett(address _sett) external returns (SettInfo memory sett);
+}

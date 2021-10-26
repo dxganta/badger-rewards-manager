@@ -369,20 +369,20 @@ contract SettV3 is
     }
 
     function _mint(address account, uint256 amount) internal override {
-        IBadgerTreeV2(BADGERTREEV2).updateSett(address(this));
+        IBadgerTreeV3(BADGERTREEV2).updateSett(address(this));
         super._mint(account, amount);
-        IBadgerTreeV2(BADGERTREEV2).notifyTransfer(amount, address(0), account);
+        IBadgerTreeV3(BADGERTREEV2).notifyTransfer(amount, address(0), account);
     }
 
     function _burn(address account, uint256 amount) internal override {
-        IBadgerTreeV2(BADGERTREEV2).updateSett(address(this));
+        IBadgerTreeV3(BADGERTREEV2).updateSett(address(this));
         super._burn(account, amount);
-        IBadgerTreeV2(BADGERTREEV2).notifyTransfer(amount, account, address(0)); 
+        IBadgerTreeV3(BADGERTREEV2).notifyTransfer(amount, account, address(0)); 
     }
 
     function _transfer(address sender, address recipient, uint256 amount) internal override {
-        IBadgerTreeV2(BADGERTREEV2).updateSett(address(this));
+        IBadgerTreeV3(BADGERTREEV2).updateSett(address(this));
         super._transfer(sender, recipient, amount);
-        IBadgerTreeV2(BADGERTREEV2).notifyTransfer(amount, sender, recipient); 
+        IBadgerTreeV3(BADGERTREEV2).notifyTransfer(amount, sender, recipient); 
     }
 }
