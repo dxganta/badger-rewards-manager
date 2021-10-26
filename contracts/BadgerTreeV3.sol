@@ -32,7 +32,7 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     mapping(address => SettInfo) public settInfo;
 
     /// @notice rewardDebt of a user for a particular token in a sett. settAddress => userAddress => token => rewardDebt
-    mapping (address => mapping (address => mapping (address => int128))) public rewardDebts;
+    mapping (address => mapping (address => mapping (address => int256))) public rewardDebts;
 
     uint64 private constant PRECISION = 1e12;
 
@@ -124,7 +124,7 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
         uint256 userBal = IERC20(_settAddress).balanceOf(_user);
 
         for (uint i = 0; i < n; i++) {
-            int128 rewardDebt = rewardDebts[_settAddress][_user][sett.rewardTokens[i]];
+            int256 rewardDebt = rewardDebts[_settAddress][_user][sett.rewardTokens[i]];
             uint256 accTokenPerShare = sett.accTokenPerShare[i];
             if (currBlock > sett.lastRewardBlock && lpSupply != 0) {
                 uint256 tokenReward = blocks * sett.tokenPerBlock[i];
@@ -216,7 +216,7 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
             uint256 pendingToken = uint256(accumulatedToken - rewardDebts[_settAddress][msg.sender][reward]);
 
             // add it to reward Debt
-            rewardDebts[_settAddress][msg.sender][reward] = int128(accumulatedToken);
+            rewardDebts[_settAddress][msg.sender][reward] = accumulatedToken;
 
             // Interactions
             require(pendingToken != 0, "No pending rewards");
