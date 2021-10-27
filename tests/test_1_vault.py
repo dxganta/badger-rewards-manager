@@ -183,7 +183,7 @@ def test_multi_deposit_addSettRewards(deployer, users, want_whale, badger_whale,
 
     assert pd1[0] > pd2[0]
 
-    vault.deposit(toDeposit * 0.2, {"from": users[2]})
+    vault.deposit(toDeposit * 0.1, {"from": users[2]})
 
     chain.mine(int(blocks_1 * 0.3) + 10)
 
@@ -196,6 +196,8 @@ def test_multi_deposit_addSettRewards(deployer, users, want_whale, badger_whale,
         assert pd1[i] > 0
         assert pd2[i] > 0
         assert pd3[i] > 0
+
+        assert pd1[i] > pd2[i] > pd3[i]
 
     # and check that all their rewards are adding up to the total rewards for each token
     assert approx(pd1[0] + pd2[0] + pd3[0], badger_amount_1, 0.001)
