@@ -39,9 +39,9 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     event Withdraw(address indexed user, address indexed sett, uint256 amount);
     event Transfer(address indexed from, address indexed to, address indexed sett, uint256 amount);
     event Claimed (address indexed user, address indexed token, address indexed sett, uint256 amount, uint256 timestamp, uint256 blockNumber);
-    event LogSettAddition(address indexed settAddress, address[] rewardTokens);
-    event LogSettRewardsCycle(address indexed settAddress, uint256 startBlock, uint256 endBlock, address[] rewards, uint128[] amounts);
-    event LogUpdateSett(address indexed settAddress, uint64 lastRewardBlock, uint256 lpSupply, uint128[] accTokenPerShare);
+    event SettAddition(address indexed settAddress, address[] rewardTokens);
+    event NewRewardsCycle(address indexed settAddress, uint256 startBlock, uint256 endBlock, address[] rewards, uint128[] amounts);
+    event UpdateSett(address indexed settAddress, uint64 lastRewardBlock, uint256 lpSupply, uint128[] accTokenPerShare);
 
     constructor( address _scheduler, address _pauser) {
         scheduler = _scheduler;
@@ -82,7 +82,7 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
             rewardTokens: _rewardTokens
         });
 
-        emit LogSettAddition(_settAddress, _rewardTokens);
+        emit SettAddition(_settAddress, _rewardTokens);
     }
 
     /// @notice add the sett rewards for the current cycle
@@ -102,7 +102,7 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
             sett.tokenPerBlock[i] = uint128(_amounts[i] / _blocks);
         }
 
-        emit LogSettRewardsCycle(_settAddress, block.number, sett.endingBlock, sett.rewardTokens, _amounts);
+        emit NewRewardsCycle(_settAddress, block.number, sett.endingBlock, sett.rewardTokens, _amounts);
     }
 
     /// @notice View function to see all pending rewards on frontend.
@@ -161,7 +161,7 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
             }
             sett.lastRewardBlock = currBlock;
             settInfo[_settAddress] = sett;
-            emit LogUpdateSett(_settAddress, sett.lastRewardBlock, lpSupply, sett.accTokenPerShare);
+            emit UpdateSett(_settAddress, sett.lastRewardBlock, lpSupply, sett.accTokenPerShare);
         }
     }
 
