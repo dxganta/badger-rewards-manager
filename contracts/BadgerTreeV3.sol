@@ -40,8 +40,8 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     event Transfer(address indexed from, address indexed to, address indexed sett, uint256 amount);
     event Claimed (address indexed user, address indexed token, address indexed sett, uint256 amount, uint256 timestamp, uint256 blockNumber);
     event LogSettAddition(address indexed settAddress, address[] rewardTokens);
-    event LogSetSett(address indexed settAddress, uint256 allocPoint);
-    event LogUpdateSett(address indexed settAddress, uint64 lastRewardBlock, uint256 lpSupply, uint256 accTokenPerShare);
+    event LogSettRewardsCycle(address indexed settAddress, uint256 startBlock, uint256 endBlock, address[] rewards, uint128[] amounts);
+    event LogUpdateSett(address indexed settAddress, uint64 lastRewardBlock, uint256 lpSupply, uint128[] accTokenPerShare);
 
     constructor( address _scheduler, address _pauser) {
         scheduler = _scheduler;
@@ -92,15 +92,17 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
     function addSettRewards(address _settAddress, uint64 _blocks, uint128[] memory _amounts) external {
         _onlyScheduler();
         updateSett(_settAddress);
-        SettInfo storage _sett = settInfo[_settAddress];
-        require(block.number > _sett.endingBlock, "Rewards cycle not over");
-        _sett.lastRewardBlock = uint64(block.number);
-        _sett.endingBlock = _sett.lastRewardBlock + _blocks;
+        SettInfo storage sett = settInfo[_settAddress];
+        require(block.number > sett.endingBlock, "Rewards cycle not over");
+        sett.lastRewardBlock = uint64(block.number);
+        sett.endingBlock = sett.lastRewardBlock + _blocks;
         // set the total rewardTokens of this sett for current cycle
         // this is used later to calculate the tokenToBadger Ratio for claiming rewards
         for (uint i = 0; i < _amounts.length; i++) {
-            _sett.tokenPerBlock[i] = uint128(_amounts[i] / _blocks);
+            sett.tokenPerBlock[i] = uint128(_amounts[i] / _blocks);
         }
+
+        emit LogSettRewardsCycle(_settAddress, block.number, sett.endingBlock, sett.rewardTokens, _amounts);
     }
 
     /// @notice View function to see all pending rewards on frontend.
@@ -159,7 +161,7 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable  {
             }
             sett.lastRewardBlock = currBlock;
             settInfo[_settAddress] = sett;
-            // emit LogUpdateSett(_settAddress, sett.lastRewardBlock, lpSupply, sett.accTokenPerShare);
+            emit LogUpdateSett(_settAddress, sett.lastRewardBlock, lpSupply, sett.accTokenPerShare);
         }
     }
 
