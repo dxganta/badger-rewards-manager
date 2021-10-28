@@ -46,16 +46,16 @@ def test_multi_vaults(deployer, users, vaults, badger_tree, badger, want):
 
     # schedule sett rewards for both vaults
     blocks_1 = 100
-    badger_amount_1 = 100 * 10**18
-    dai_amount_1 = 400 * 10**18
-    crv_amount_1 = 200 * 10**18
+    badger_amount_1 = 10 * 10**18
+    dai_amount_1 = 40 * 10**18
+    crv_amount_1 = 20 * 10**18
     addSettCycle(vaults[0], blocks_1, badger_amount_1,
                  dai_amount_1, crv_amount_1)
 
     blocks_2 = 120
-    badger_amount_2 = 80 * 10**18
-    dai_amount_2 = 1000 * 10**18
-    crv_amount_2 = 150 * 10**18
+    badger_amount_2 = 8 * 10**18
+    dai_amount_2 = 100 * 10**18
+    crv_amount_2 = 15 * 10**18
     addSettCycle(vaults[1], blocks_2, badger_amount_2,
                  dai_amount_2, crv_amount_2)
 
@@ -86,5 +86,5 @@ def test_multi_vaults(deployer, users, vaults, badger_tree, badger, want):
 
     for i in range(2):
         for j in range(2):
-            badger_tree.claim(vaults[0], users[j], [
-                              0, 1, 2], {"from": users[i]})
+            badger_tree.claim(vaults[i], users[j], [
+                              0, 1, 2], {"from": users[j]})

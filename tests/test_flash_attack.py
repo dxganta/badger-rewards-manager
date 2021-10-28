@@ -27,9 +27,9 @@ def test_deposit_withdraw_rewards(deployer, users, vaults, badger_tree, badger, 
     flash_attack = FlashAttack.deploy(vault, {"from": attacker})
 
     blocks = 100
-    badger_amount = 100 * 10**18
-    dai_amount = 400 * 10**18
-    crv_amount = 200 * 10**18
+    badger_amount = 10 * 10**18
+    dai_amount = 40 * 10**18
+    crv_amount = 20 * 10**18
     badger.transfer(badger_tree, badger_amount, {"from": deployer})
     dai.transfer(badger_tree, dai_amount, {"from": deployer})
     crv.transfer(badger_tree, crv_amount, {"from": deployer})

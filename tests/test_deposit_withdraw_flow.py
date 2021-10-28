@@ -25,9 +25,9 @@ def test_deposit_withdraw_rewards(deployer, users, vaults, badger_tree, badger, 
 
     # schedule sett rewards for 100 blocks
     blocks = 100
-    badger_amount = 100 * 10**18
-    dai_amount = 400 * 10**18
-    crv_amount = 200 * 10**18
+    badger_amount = 10 * 10**18
+    dai_amount = 40 * 10**18
+    crv_amount = 20 * 10**18
     badger.transfer(badger_tree, badger_amount, {"from": deployer})
     dai.transfer(badger_tree, dai_amount, {"from": deployer})
     crv.transfer(badger_tree, crv_amount, {"from": deployer})
@@ -64,9 +64,9 @@ def test_deposit_withdraw_rewards(deployer, users, vaults, badger_tree, badger, 
 
     # 2nd cycle
     blocks = 100
-    badger_amount = 50 * 10**18
-    dai_amount = 900 * 10**18
-    crv_amount = 100 * 10**18
+    badger_amount = 5 * 10**18
+    dai_amount = 90 * 10**18
+    crv_amount = 10 * 10**18
     badger.transfer(badger_tree, badger_amount, {"from": deployer})
     dai.transfer(badger_tree, dai_amount, {"from": deployer})
     crv.transfer(badger_tree, crv_amount, {"from": deployer})
@@ -92,12 +92,13 @@ def test_deposit_withdraw_rewards(deployer, users, vaults, badger_tree, badger, 
 
     # 3rd cycle => depositing in the middle of a cycle
     blocks = 100
-    badger_amount = 20 * 10**18
-    dai_amount = 1000 * 10**18
-    crv_amount = 50 * 10**18
-    badger.transfer(badger_tree, badger_amount, {"from": deployer})
-    dai.transfer(badger_tree, dai_amount, {"from": deployer})
-    crv.transfer(badger_tree, crv_amount, {"from": deployer})
+    badger_amount = 2 * 10**18
+    dai_amount = 100 * 10**18
+    crv_amount = 5 * 10**18
+    # adding a very very very little extra tokens to make sure we dont have any precision errors
+    badger.transfer(badger_tree, badger_amount + 5, {"from": deployer})
+    dai.transfer(badger_tree, dai_amount + 5, {"from": deployer})
+    crv.transfer(badger_tree, crv_amount + 5, {"from": deployer})
     badger_tree.addSettRewards(
         vault, blocks, [badger_amount, dai_amount, crv_amount], {"from": deployer})
 
@@ -141,7 +142,7 @@ def test_deposit_withdraw_rewards(deployer, users, vaults, badger_tree, badger, 
     # 4th cycle
     blocks = 50
     badger_amount = 30 * 10**18
-    dai_amount = 1500 * 10**18
+    dai_amount = 150 * 10**18
     crv_amount = 40 * 10**18
     badger.transfer(badger_tree, badger_amount, {"from": deployer})
     dai.transfer(badger_tree, dai_amount, {"from": deployer})

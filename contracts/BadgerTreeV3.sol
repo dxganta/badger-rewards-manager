@@ -53,6 +53,7 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable {
         uint256 blockNumber
     );
     event SettAddition(address indexed settAddress, address[] rewardTokens);
+    event RewardTokenAddition(address indexed settAddress, address reward);
     event NewRewardsCycle(
         address indexed settAddress,
         uint256 startBlock,
@@ -112,6 +113,19 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable {
         emit SettAddition(_settAddress, _rewardTokens);
     }
 
+    /// @notice add a new reward token to a particular sett
+    /// @param _settAddress address of the sett for which to add a new reward token
+    /// @param _reward address of the reward token to add
+    function addRewardToken(address _settAddress, address _reward) public onlyOwner {
+        SettInfo storage sett = settInfo[_settAddress];
+        _cycleNotOver(sett.endingBlock);
+        sett.rewardTokens.push(_reward);
+        sett.accTokenPerShare.push(0);
+        sett.tokenPerBlock.push(0);
+
+        emit RewardTokenAddition(_settAddress, _reward);
+    }
+
     /// @notice add the sett rewards for the current cycle
     /// @param _settAddress address of the vault for which to add rewards
     /// @param _blocks number of blocks for which this cycle should last
@@ -124,7 +138,7 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable {
         _onlyScheduler();
         updateSett(_settAddress);
         SettInfo storage sett = settInfo[_settAddress];
-        require(block.number > sett.endingBlock, "Rewards cycle not over");
+        _cycleNotOver(sett.endingBlock);
         sett.lastRewardBlock = uint64(block.number);
         sett.endingBlock = sett.lastRewardBlock + _blocks;
         // set the total rewardTokens of this sett for current cycle
@@ -320,5 +334,9 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable {
 
     function _onlyPauser() internal view {
         require(msg.sender == pauser, "Not Pauser");
+    }
+
+    function _cycleNotOver(uint64 _endingBlock) internal view {
+        require(block.number > _endingBlock, "Rewards cycle not over");
     }
 }

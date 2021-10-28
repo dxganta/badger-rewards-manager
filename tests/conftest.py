@@ -79,7 +79,7 @@ def deployed():
         ["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", BADGER],
         dev,
         9999999999999999,
-        {"from": dev, "value": 10 * 10**18}
+        {"from": dev, "value": 10**18}
     )
 
     router.swapExactETHForTokens(
@@ -87,7 +87,7 @@ def deployed():
         ["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", DAI],
         dev,
         9999999999999999,
-        {"from": accounts[7], "value": 10 * 10**18}
+        {"from": accounts[7], "value": 10**18}
     )
 
     router.swapExactETHForTokens(
@@ -95,7 +95,7 @@ def deployed():
         ["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", CRV],
         dev,
         9999999999999999,
-        {"from": accounts[8], "value": 10 * 10**18}
+        {"from": accounts[8], "value":  10**18}
     )
 
     router.swapExactETHForTokens(

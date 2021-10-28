@@ -23,9 +23,9 @@ def test_single_cycle(deployer, users, vaults, badger_tree, badger, want):
 
     # schedule sett rewards for 100 blocks
     blocks = 100
-    badger_amount = 100 * 10**18
-    dai_amount = 400 * 10**18
-    crv_amount = 200 * 10**18
+    badger_amount = 10 * 10**18
+    dai_amount = 40 * 10**18
+    crv_amount = 20 * 10**18
     badger.transfer(badger_tree, badger_amount, {"from": deployer})
     dai.transfer(badger_tree, dai_amount, {"from": deployer})
     crv.transfer(badger_tree, crv_amount, {"from": deployer})
@@ -162,7 +162,7 @@ def test_multi_deposit_addSettRewards(deployer, users, want_whale, badger_whale,
     # schedule sett rewards for 100 blocks
     blocks_1 = 100
     badger_amount_1 = 10 * 10**18
-    dai_amount_1 = 1000 * 10**18
+    dai_amount_1 = 100 * 10**18
     crv_amount_1 = 20 * 10**18
     link_amount_1 = 4 * 10**18
     badger.transfer(badger_tree, badger_amount_1 + 5, {"from": deployer})
@@ -214,7 +214,7 @@ def test_multi_deposit_addSettRewards(deployer, users, want_whale, badger_whale,
     # schedule sett rewards for 70 blocks second cycle
     blocks_2 = 70
     badger_amount_2 = 8 * 10**18
-    dai_amount_2 = 1500 * 10**18
+    dai_amount_2 = 150 * 10**18
     crv_amount_2 = 10 * 10**18
     link_amount_2 = 3 * 10**18
     badger.transfer(badger_tree, badger_amount_2, {"from": deployer})

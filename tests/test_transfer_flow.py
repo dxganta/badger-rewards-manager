@@ -28,7 +28,7 @@ def test_transfer_flow(deployer, users, vaults, badger_tree, badger, want):
     # schedule sett rewards for 100 blocks
     blocks = 100
     badger_amount = 10 * 10**18
-    dai_amount = 400 * 10**18
+    dai_amount = 40 * 10**18
     crv_amount = 20 * 10**18
     badger.transfer(badger_tree, badger_amount, {"from": deployer})
     dai.transfer(badger_tree, dai_amount, {"from": deployer})
@@ -59,8 +59,8 @@ def test_transfer_flow(deployer, users, vaults, badger_tree, badger, want):
     # schedule sett rewards for 100 blocks
     blocks = 50
     badger_amount = 10 * 10**18
-    dai_amount = 300 * 10**18
-    crv_amount = 70 * 10**18
+    dai_amount = 30 * 10**18
+    crv_amount = 7 * 10**18
     badger.transfer(badger_tree, badger_amount, {"from": deployer})
     dai.transfer(badger_tree, dai_amount, {"from": deployer})
     crv.transfer(badger_tree, crv_amount, {"from": deployer})

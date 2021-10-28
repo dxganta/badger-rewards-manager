@@ -2,11 +2,12 @@
 
 
 # Tests
-1. Test that if deposit & withdraw is done in the same block then rewards are zero.
 
 2. Add new reward Token & Tests for it.
 
 3. Also add a production_deploy.sol file
+
+4. Deploy on ropsten/goerli & test that you can check the reward tokens for a set from the explorer.
 
 
 
