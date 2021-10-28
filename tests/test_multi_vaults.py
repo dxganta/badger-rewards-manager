@@ -83,3 +83,8 @@ def test_multi_vaults(deployer, users, vaults, badger_tree, badger, want):
 
     assert approx(pd12[2] + pd22[2]) == v1_u2_prcnt * \
         crv_amount_1 + v2_u2_prcnt * crv_amount_2
+
+    for i in range(2):
+        for j in range(2):
+            badger_tree.claim(vaults[0], users[j], [
+                              0, 1, 2], {"from": users[i]})

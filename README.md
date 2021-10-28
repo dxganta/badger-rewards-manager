@@ -4,34 +4,11 @@
 # Tests
 1. Test that if deposit & withdraw is done in the same block then rewards are zero.
 
-Start with notifyTransfer
-  - Does balance work?
-   - 1 user 1 vault
-    - 1 user 2 vaults
-    - 2 users 1 vaults
+2. Add new reward Token & Tests for it.
 
- - Does callign update sett work?
-   - Update set
-  - deposit and update set
-  - depoist, deposit and update set
-  - deposit, update set, and deposit again
+3. Also add a production_deploy.sol file
 
- - Check math of pending rewards with above 
- 
- - addSetRewards
-  - Once per sett and then deposit
-  - Once per sett and then multiple people deposit (3 accounts)
- - Add, then deposit then add again
 
-For testing trasnfer
-Do a vault contract
-That triggers tht
-When I mint shares
-I get more points
-When I burn shares
-I get less points
-When I burn after having accrued some points, my previous points grew by the original mint
-But the new points will grow based on the new amount
 
 
 ## Gas costs (BadgerTreeV3)
