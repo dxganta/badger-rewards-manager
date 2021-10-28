@@ -110,7 +110,7 @@ def deployed():
     user1 = get_want_for_user(accounts[1], WANT, router)
     user2 = get_want_for_user(accounts[2], WANT, router)
     user3 = get_want_for_user(accounts[3], WANT, router)
-    # user4 = get_want_for_user(accounts[4], WANT, router)
+    user4 = get_want_for_user(accounts[4], WANT, router)
     # user5 = get_want_for_user(accounts[5], WANT, router)
     # user6 = get_want_for_user(accounts[6], WANT, router)
 
@@ -120,7 +120,7 @@ def deployed():
 
     return DotMap(
         deployer=dev,
-        users=[user1, user2, user3],
+        users=[user1, user2, user3, user4],
         vaults=[vault1, vault2],
         badger_tree=badger_tree,
         badger=badger,

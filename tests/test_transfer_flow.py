@@ -3,7 +3,6 @@ from brownie import (
     interface
 )
 from helpers.constants import *
-from helpers.utils import *
 from config import DAI, CRV
 from pytest import approx
 
