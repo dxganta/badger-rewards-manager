@@ -43,14 +43,17 @@ def test_transfer_flow(deployer, users, vaults, badger_tree, badger, want):
     pd2 = badger_tree.pendingRewards(vault, users[1])
 
     # user 1 must get only 50% of the vault rewards & the rest must go to user 2
-    assert approx(pd1[0] == badger_amount * 0.5)
-    assert approx(pd2[0] == badger_amount * 0.5)
+    assert approx(pd1[0]) == badger_amount * 0.5
+    assert approx(pd2[0]) == badger_amount * 0.5
 
-    assert approx(pd1[1] == dai_amount * 0.5)
-    assert approx(pd2[1] == dai_amount * 0.5)
+    assert approx(pd1[1]) == dai_amount * 0.5
+    assert approx(pd2[1]) == dai_amount * 0.5
 
-    assert approx(pd1[2] == crv_amount * 0.5)
-    assert approx(pd2[2] == crv_amount * 0.5)
+    assert approx(pd1[2]) == crv_amount * 0.5
+    assert approx(pd2[2]) == crv_amount * 0.5
+
+    for i in range(0, 2):
+        badger_tree.claim(vault, users[i], [0, 1, 2], {"from": users[i]})
 
     # transferring in the middle of a cycle
 
@@ -82,7 +85,8 @@ def test_transfer_flow(deployer, users, vaults, badger_tree, badger, want):
     pd2 = badger_tree.pendingRewards(vault, users[1])
     pd3 = badger_tree.pendingRewards(vault, users[2])
 
-    assert approx(pd2[0] == badger_amount * u2_prcnt * 0.5 + badger_amount * u2_prcnt_new *
-                  0.5 + (badger_amount/blocks * u2_prcnt) - (badger_amount/blocks * u2_prcnt_new))
-    assert approx(pd3[0] == badger_amount * u3_prcnt * 0.5 + badger_amount * u3_prcnt_new *
-                  0.5 - (badger_amount/blocks * u3_prcnt) + (badger_amount/blocks * u3_prcnt_new))
+    assert approx(pd2[0]) == (badger_amount * u2_prcnt * 0.5) + (badger_amount * u2_prcnt_new *
+                                                                 0.5) + (badger_amount/blocks * u2_prcnt) - \
+        (badger_amount/blocks * u2_prcnt_new)
+    assert approx(pd3[0]) == (badger_amount * u3_prcnt_new *
+                              0.5) - (badger_amount/blocks * u3_prcnt_new)
