@@ -3,8 +3,6 @@
 
 # Tests
 
-3. Also add a production_deploy.sol file
-
 4. Deploy on ropsten/goerli & test that you can check the reward tokens for a set from the explorer.
 
 
