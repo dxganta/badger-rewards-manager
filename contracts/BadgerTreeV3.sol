@@ -136,9 +136,9 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable {
         uint128[] memory _amounts
     ) external {
         _onlyScheduler();
-        updateSett(_settAddress);
         SettInfo storage sett = settInfo[_settAddress];
         _cycleNotOver(sett.endingBlock);
+        updateSett(_settAddress);
         sett.lastRewardBlock = uint64(block.number);
         sett.endingBlock = sett.lastRewardBlock + _blocks;
         // set the total rewardTokens of this sett for current cycle
