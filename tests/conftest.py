@@ -149,6 +149,16 @@ def badger_whale(accounts):
 
 
 @pytest.fixture
+def dai_whale(accounts):
+    return accounts.at("0xc73f6738311e76d45dfed155f39773e68251d251", force=True)
+
+
+@pytest.fixture
+def crv_whale(accounts):
+    return accounts.at("0x7a16ff8270133f063aab6c9977183d9e72835428", force=True)
+
+
+@pytest.fixture
 def badger_tree(deployed):
     return deployed.badger_tree
 

@@ -7,11 +7,11 @@ from config import DAI, CRV
 from pytest import approx
 
 
-def test_multi_vaults(deployer, users, vaults, badger_tree, badger, want):
+def test_multi_vaults(deployer, users, vaults, badger_tree, badger, badger_whale, dai_whale, crv_whale, want):
     def addSettCycle(vault, blocks, badger_amount, dai_amount, crv_amount):
-        badger.transfer(badger_tree, badger_amount, {"from": deployer})
-        dai.transfer(badger_tree, dai_amount, {"from": deployer})
-        crv.transfer(badger_tree, crv_amount, {"from": deployer})
+        badger.transfer(badger_tree, badger_amount, {"from": badger_whale})
+        dai.transfer(badger_tree, dai_amount, {"from": dai_whale})
+        crv.transfer(badger_tree, crv_amount, {"from": crv_whale})
         badger_tree.addSettRewards(
             vault, blocks, [badger_amount, dai_amount, crv_amount], {"from": deployer})
 
@@ -84,10 +84,15 @@ def test_multi_vaults(deployer, users, vaults, badger_tree, badger, want):
     assert approx(pd12[2] + pd22[2]) == v1_u2_prcnt * \
         crv_amount_1 + v2_u2_prcnt * crv_amount_2
 
-    for i in range(2):
-        for j in range(2):
-            badger_tree.claim(vaults[i], users[j], [
-                              0, 1, 2], {"from": users[j]})
+    # for i in range(2):
+    #     for j in range(2):
+    #         badger_tree.claim(vaults[i], users[j], [
+    #                           0, 1, 2], {"from": users[j]})
+
+    badger_tree.claim(vaults[0], users[0], [0, 1, 2], {"from": users[0]})
+    badger_tree.claim(vaults[0], users[1], [0, 1, 2], {"from": users[1]})
+    badger_tree.claim(vaults[1], users[0], [0, 1, 2], {"from": users[0]})
+    badger_tree.claim(vaults[1], users[1], [0, 1, 2], {"from": users[1]})
 
     print(f"Badger balance {badger.balanceOf(badger_tree)}")
     print(f"DAI Balance {dai.balanceOf(badger_tree)}")
