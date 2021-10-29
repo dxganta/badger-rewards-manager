@@ -9,8 +9,4 @@
 
 
 ## Gas costs (BadgerTreeV3)
-1. Deposit => 198406
-2. addSetRewards => 64832
-3. add => 93878
-4. claim => 195526 (for 1 reward token), 238474 (for 2 reward tokens), 280230 (for 3 reward tokens)
-5. withdraw => 75588
+<img src="https://user-images.githubusercontent.com/47485188/139430068-3a1bd0d0-1604-4fdc-8327-2bd1b949df1a.png">
