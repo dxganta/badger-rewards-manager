@@ -11,4 +11,4 @@
 5. want-A = [0xe466fBF883c5A91a2C7bcD5e2B1e7c84858514A8](https://ropsten.etherscan.io/address/0xe466fBF883c5A91a2C7bcD5e2B1e7c84858514A8)
 6. want-B = [0xB332685f94793dC2aaD5dF11EedB744f572849d9](https://ropsten.etherscan.io/address/0xB332685f94793dC2aaD5dF11EedB744f572849d9)
 7. sett-A (with want-A) = [0x53F102aaDfDe08102A1d49de97eaE0a19B4F2343](https://ropsten.etherscan.io/address/0x53F102aaDfDe08102A1d49de97eaE0a19B4F2343)
-8. sett-B (with want-B) = [0xE6cFfCD95C67fd05cee1E04FF58380f3729fF1df](https://ropsten.etherscan.io/address/0x53F102aaDfDe08102A1d49de97eaE0a19B4F2343)
+8. sett-B (with want-B) = [0xE6cFfCD95C67fd05cee1E04FF58380f3729fF1df](https://ropsten.etherscan.io/address/0xE6cFfCD95C67fd05cee1E04FF58380f3729fF1df)
