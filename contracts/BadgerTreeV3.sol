@@ -110,6 +110,7 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable {
         public
         onlyOwner
     {
+        require(_settInfo[_settAddress].lastRewardBlock == 0, "Sett exists");
         _settInfo[_settAddress] = SettInfo({
             lastRewardBlock: 0,
             accTokenPerShare: new uint128[](_rewardTokens.length),
