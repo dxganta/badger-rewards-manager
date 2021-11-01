@@ -327,6 +327,16 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable {
         }
     }
 
+    /// @notice function to transfer any remaining tokens from the contract to the scheduler
+    /// @param _tokens address of the tokens to transfer
+    /// @param _amounts amounts of each token respectively
+    function sweepDust( address[] memory _tokens, uint[] memory _amounts) external {
+        _onlyScheduler();
+        for (uint i =0; i < _tokens.length ; i ++) {
+            IERC20(_tokens[i]).transfer(msg.sender, _amounts[i]);
+        }
+    }
+
     /// INTERNAL FUNCTIONS
     function _onlyScheduler() internal view {
         require(msg.sender == scheduler, "Not Scheduler");

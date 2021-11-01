@@ -45,17 +45,17 @@ def test_multi_vaults(deployer, users, vaults, badger_tree, badger, badger_whale
     assert approx(v2_u2_prcnt) == 0.15 / (0.05 + 0.15)
 
     # schedule sett rewards for both vaults
-    blocks_1 = 100
+    blocks_1 = 4032
     badger_amount_1 = 100 * 10**18
     dai_amount_1 = 400 * 10**18
     crv_amount_1 = 200 * 10**18
     addSettCycle(vaults[0], blocks_1, badger_amount_1,
                  dai_amount_1, crv_amount_1)
 
-    blocks_2 = 120
-    badger_amount_2 = 80 * 10**18
-    dai_amount_2 = 1000 * 10**18
-    crv_amount_2 = 150 * 10**18
+    blocks_2 = 4100
+    badger_amount_2 = 80000 * 10**18
+    dai_amount_2 = 1000000 * 10**18
+    crv_amount_2 = 115000 * 10**18
     addSettCycle(vaults[1], blocks_2, badger_amount_2,
                  dai_amount_2, crv_amount_2)
 
@@ -84,15 +84,10 @@ def test_multi_vaults(deployer, users, vaults, badger_tree, badger, badger_whale
     assert approx(pd12[2] + pd22[2]) == v1_u2_prcnt * \
         crv_amount_1 + v2_u2_prcnt * crv_amount_2
 
-    # for i in range(2):
-    #     for j in range(2):
-    #         badger_tree.claim(vaults[i], users[j], [
-    #                           0, 1, 2], {"from": users[j]})
-
-    badger_tree.claim(vaults[0], users[0], [0, 1, 2], {"from": users[0]})
-    badger_tree.claim(vaults[0], users[1], [0, 1, 2], {"from": users[1]})
-    badger_tree.claim(vaults[1], users[0], [0, 1, 2], {"from": users[0]})
-    badger_tree.claim(vaults[1], users[1], [0, 1, 2], {"from": users[1]})
+    for i in range(1, 2):
+        for j in range(2):
+            badger_tree.claim(vaults[i], users[j], [
+                              0, 1, 2], {"from": users[j]})
 
     print(f"Badger balance {badger.balanceOf(badger_tree)}")
     print(f"DAI Balance {dai.balanceOf(badger_tree)}")
