@@ -27,8 +27,8 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable {
     address public scheduler;
     address public pauser;
 
-    /// @notice Info of each sett. settAddress => settInfo
-    mapping(address => SettInfo) public settInfo;
+    /// @notice Info of each sett. settAddress => _settInfo
+    mapping(address => SettInfo) private _settInfo;
 
     /// @notice rewardDebt of a user for a particular token in a sett. settAddress => userAddress => token => rewardDebt
     mapping(address => mapping(address => mapping(address => int256)))
@@ -73,6 +73,14 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable {
         pauser = _pauser;
     }
 
+
+    /// @notice view the details of a sett
+    function getSettInfo(address _settAddress) public view returns (uint64 lastRewardBlock, uint64 endingBlock, uint128[] memory accTokenPerShare, uint128[] memory tokenPerBlock, address[] memory rewardTokens ) {
+        SettInfo memory sett = _settInfo[_settAddress];
+
+        return (sett.lastRewardBlock, sett.endingBlock, sett.accTokenPerShare, sett.tokenPerBlock, sett.rewardTokens);
+    }
+
     /// @notice set the scheduler who will schedule the rewards
     function setScheduler(address _scheduler) external {
         _onlyScheduler();
@@ -102,7 +110,7 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable {
         public
         onlyOwner
     {
-        settInfo[_settAddress] = SettInfo({
+        _settInfo[_settAddress] = SettInfo({
             lastRewardBlock: 0,
             accTokenPerShare: new uint128[](_rewardTokens.length),
             tokenPerBlock: new uint128[](_rewardTokens.length),
@@ -117,7 +125,7 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable {
     /// @param _settAddress address of the sett for which to add a new reward token
     /// @param _reward address of the reward token to add
     function addRewardToken(address _settAddress, address _reward) public onlyOwner {
-        SettInfo storage sett = settInfo[_settAddress];
+        SettInfo storage sett = _settInfo[_settAddress];
         _cycleNotOver(sett.endingBlock);
         sett.rewardTokens.push(_reward);
         sett.accTokenPerShare.push(0);
@@ -136,7 +144,7 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable {
         uint128[] memory _amounts
     ) external {
         _onlyScheduler();
-        SettInfo storage sett = settInfo[_settAddress];
+        SettInfo storage sett = _settInfo[_settAddress];
         _cycleNotOver(sett.endingBlock);
         updateSett(_settAddress);
         sett.lastRewardBlock = uint64(block.number);
@@ -165,7 +173,7 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable {
         view
         returns (uint256[] memory)
     {
-        SettInfo memory sett = settInfo[_settAddress];
+        SettInfo memory sett = _settInfo[_settAddress];
         uint256 n = sett.rewardTokens.length;
         uint256[] memory allPending = new uint256[](n);
 
@@ -208,7 +216,7 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable {
         public
         returns (SettInfo memory sett)
     {
-        sett = settInfo[_settAddress];
+        sett = _settInfo[_settAddress];
         uint64 currBlock = uint64(block.number);
         if (block.number > sett.endingBlock) {
             // this will happen most probably when updateSett is called on addSettRewards
@@ -226,7 +234,7 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable {
                 }
             }
             sett.lastRewardBlock = currBlock;
-            settInfo[_settAddress] = sett;
+            _settInfo[_settAddress] = sett;
             emit UpdateSett(
                 _settAddress,
                 sett.lastRewardBlock,
@@ -243,7 +251,7 @@ contract BadgerTreeV3 is BoringBatchable, BoringOwnable, PausableUpgradeable {
         address _from,
         address _to
     ) public {
-        SettInfo memory sett = settInfo[msg.sender];
+        SettInfo memory sett = _settInfo[msg.sender];
 
         uint256 t = sett.rewardTokens.length;
         int128[] memory tokenDebts = new int128[](t);

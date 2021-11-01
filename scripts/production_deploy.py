@@ -19,7 +19,8 @@ def main():
     badger_tree = BadgerTreeV3.deploy(
         SCHEDULER,
         PAUSER,
-        {"from": owner}
+        {"from": owner},
+        publish_source=True
     )
 
     return DotMap(
